@@ -1,0 +1,100 @@
+
+
+services:
+  gateway:
+    build: ../services/gateway
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - booking
+      - incident
+      - baggage
+      - analytics
+    environment:
+      - JWT_SECRET=supersecret
+
+  booking:
+    build: ../services/booking
+    restart: on-failure
+    ports:
+      - "8081:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASS=postgres
+    depends_on:
+      - postgres
+      - redis
+
+  incident:
+    build: ../services/incident
+    restart: on-failure
+    ports:
+      - "8083:8080"
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
+
+  baggage:
+    build: ../services/baggage
+    restart: on-failure
+    ports:
+      - "8084:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASS=postgres
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - rabbitmq
+
+  analytics:
+    build: ../services/analytics
+    restart: on-failure
+    ports:
+      - "8085:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASS=postgres
+    depends_on:
+      - postgres
+
+  webui:
+    build: ../services/webui
+    restart: on-failure
+    ports:
+      - "3000:80"
+    depends_on:
+      - gateway
+
+  postgres:
+    image: postgres:13-alpine
+    environment:
+      - POSTGRES_DB=cleanair
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:6-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+volumes:
+  pgdata:
