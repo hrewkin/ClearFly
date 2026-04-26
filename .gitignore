@@ -1,0 +1,16 @@
+# Build artifacts
+node_modules/
+dist/
+*.exe
+gateway-bin
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log

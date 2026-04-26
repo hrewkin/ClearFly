@@ -16,6 +16,7 @@ services:
       - incident
       - baggage
       - analytics
+      - notification
     environment:
       - JWT_SECRET=supersecret
 
@@ -28,9 +29,11 @@ services:
       - DB_HOST=postgres
       - DB_USER=postgres
       - DB_PASS=postgres
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     depends_on:
       - postgres
       - redis
+      - rabbitmq
 
   passenger:
     build: ../services/passenger
@@ -79,6 +82,16 @@ services:
       - DB_PASS=postgres
     depends_on:
       - postgres
+
+  notification:
+    build: ../services/notification
+    restart: on-failure
+    ports:
+      - "8086:8080"
+    environment:
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    depends_on:
+      - rabbitmq
 
   webui:
     build: ../services/webui

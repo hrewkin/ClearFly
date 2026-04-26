@@ -31,6 +31,34 @@ func (m *mockRepo) GetByID(ctx context.Context, id uuid.UUID) (*Booking, error) 
 	return b, nil
 }
 
+func (m *mockRepo) GetByPNR(ctx context.Context, pnr string) (*Booking, error) {
+	for _, b := range m.bookings {
+		if b.PNRCode == pnr {
+			return b, nil
+		}
+	}
+	return nil, errors.New("not found")
+}
+
+func (m *mockRepo) ListByPassenger(ctx context.Context, passengerID uuid.UUID) ([]Booking, error) {
+	var out []Booking
+	for _, b := range m.bookings {
+		if b.PassengerID == passengerID {
+			out = append(out, *b)
+		}
+	}
+	return out, nil
+}
+
+func (m *mockRepo) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status string) error {
+	b, ok := m.bookings[id]
+	if !ok {
+		return errors.New("not found")
+	}
+	b.PaymentStatus = status
+	return nil
+}
+
 func TestCreateBooking(t *testing.T) {
 	repo := newMockRepo()
 	svc := NewBookingService(repo)

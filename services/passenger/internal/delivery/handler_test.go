@@ -42,6 +42,10 @@ func (m *mockService) UpdatePassenger(ctx context.Context, id uuid.UUID, name, e
 	return nil, errors.New("not implemented")
 }
 
+func (m *mockService) UpdatePreferences(ctx context.Context, id uuid.UUID, loyaltyTier, meal, special string, points int) (*usecase.Passenger, error) {
+	return nil, errors.New("not implemented")
+}
+
 func (m *mockService) DeletePassenger(ctx context.Context, id uuid.UUID) error {
 	if m.deleteFunc != nil {
 		return m.deleteFunc(ctx, id)

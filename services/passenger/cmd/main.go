@@ -27,27 +27,43 @@ func main() {
 	}
 	defer db.Close()
 
-	// Initialize database schema
 	schema := `
     CREATE TABLE IF NOT EXISTS passengers (
         id UUID PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
         phone VARCHAR(50) NOT NULL,
-        passport_number VARCHAR(50) NOT NULL
+        passport_number VARCHAR(50) NOT NULL,
+        loyalty_tier VARCHAR(20) DEFAULT 'STANDARD',
+        loyalty_points INT DEFAULT 0,
+        meal_preference VARCHAR(20) DEFAULT 'STANDARD',
+        special_needs VARCHAR(50) DEFAULT ''
     );`
 	db.MustExec(schema)
+	migrations := []string{
+		`ALTER TABLE passengers ADD COLUMN IF NOT EXISTS loyalty_tier VARCHAR(20) DEFAULT 'STANDARD';`,
+		`ALTER TABLE passengers ADD COLUMN IF NOT EXISTS loyalty_points INT DEFAULT 0;`,
+		`ALTER TABLE passengers ADD COLUMN IF NOT EXISTS meal_preference VARCHAR(20) DEFAULT 'STANDARD';`,
+		`ALTER TABLE passengers ADD COLUMN IF NOT EXISTS special_needs VARCHAR(50) DEFAULT '';`,
+	}
+	for _, m := range migrations {
+		if _, err := db.Exec(m); err != nil {
+			log.Printf("passenger migration warning: %v", err)
+		}
+	}
 
-	// Repository & service layer
 	repo := repository.NewPostgresPassengerRepo(db)
 	svc := usecase.NewPassengerService(repo)
 
-	// HTTP layer
 	r := gin.Default()
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok", "service": "passenger"})
+	})
 	h := delivery.NewHandler(svc)
 	r.POST("/passengers", h.CreatePassenger)
 	r.GET("/passengers/:id", h.GetPassenger)
 	r.PUT("/passengers/:id", h.UpdatePassenger)
+	r.PATCH("/passengers/:id/preferences", h.UpdatePreferences)
 	r.DELETE("/passengers/:id", h.DeletePassenger)
 
 	// Run server

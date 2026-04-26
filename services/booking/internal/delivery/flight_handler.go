@@ -87,19 +87,47 @@ func (h *FlightHandler) UpdateFlightStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "flight status updated"})
 }
 
-// GetAvailableSeats handles GET /flights/:id/seats
-func (h *FlightHandler) GetAvailableSeats(c *gin.Context) {
+// GetSeats handles GET /flights/:id/seats — returns all seats with status
+// so clients can render a visual seat map (available + booked).
+func (h *FlightHandler) GetSeats(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid flight id"})
 		return
 	}
-	seats, err := h.svc.GetAvailableSeats(c.Request.Context(), id)
+	seats, err := h.svc.GetSeatsByFlight(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, seats)
+}
+
+// ListTariffs handles GET /flights/:id/tariffs.
+func (h *FlightHandler) ListTariffs(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid flight id"})
+		return
+	}
+	ts, err := h.svc.ListTariffs(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, ts)
+}
+
+// UpcomingFlights handles GET /flights/upcoming?limit=N — list of next
+// scheduled flights, used as default content on the search page.
+func (h *FlightHandler) UpcomingFlights(c *gin.Context) {
+	limit := 10
+	flights, err := h.svc.UpcomingFlights(c.Request.Context(), limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, flights)
 }
 
 // CreateTariff handles POST /flights/:id/tariff
