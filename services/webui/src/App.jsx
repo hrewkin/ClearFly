@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import { Routes, Route, NavLink } from 'react-router-dom';
 import './App.css';
 import './index.css';
+import BaggagePage from './pages/BaggagePage';
+import AnalyticsPage from './pages/AnalyticsPage';
+import ProfilePage from './pages/ProfilePage';
 
-function App() {
+function DashboardPage() {
   const [bookingId, setBookingId] = useState('');
   const [bookingResult, setBookingResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -15,7 +19,6 @@ function App() {
     setBookingResult(null);
 
     try {
-      // Proxy is running on gateway :8080
       const res = await fetch(`http://localhost:8080/api/v1/bookings/${bookingId}`);
       if (!res.ok) {
         throw new Error('Booking not found');
@@ -55,79 +58,93 @@ function App() {
   };
 
   return (
+    <>
+      <header>
+        <h1>Панель управления</h1>
+        <p className="subtitle">Добро пожаловать. Готовы к следующему приключению?</p>
+      </header>
+
+      <section className="dashboard-cards">
+        <div className="card glass-effect animate-in">
+          <h3>Найти бронирование</h3>
+          <p>Введите ID бронирования (UUID) для просмотра деталей.</p>
+          <form onSubmit={fetchBooking} className="search-form">
+            <input 
+              type="text" 
+              placeholder="e.g. 123e4567-e89b..." 
+              value={bookingId}
+              onChange={(e) => setBookingId(e.target.value)}
+              required
+            />
+            <button type="submit" disabled={loading}>
+              {loading ? 'Поиск...' : 'Найти'}
+            </button>
+          </form>
+        </div>
+
+        <div className="card glass-effect highlight animate-in" style={{ animationDelay: '0.1s' }}>
+          <h3>Быстрое бронирование</h3>
+          <p>Нужно тестовое бронирование? Создайте мгновенную демо-резервацию.</p>
+          <button className="primary-btn" onClick={createFakeBooking} disabled={loading}>
+            Создать демо-бронирование
+          </button>
+        </div>
+      </section>
+
+      {error && (
+        <div className="alert error animate-in">
+          <strong>Ошибка:</strong> {error}
+        </div>
+      )}
+
+      {bookingResult && (
+        <section className="results-section animate-in">
+          <h2>{bookingResult.isNew ? 'Бронирование создано!' : 'Детали бронирования'}</h2>
+          <div className="ticket">
+            <div className="ticket-header">
+              <span className="status">{bookingResult.status}</span>
+              <span className="booking-id">ID: {bookingResult.id}</span>
+            </div>
+            <div className="ticket-body">
+              <div className="info-group">
+                <label>ID Рейса</label>
+                <span>{bookingResult.flight_id}</span>
+              </div>
+              <div className="info-group">
+                <label>ID Пассажира</label>
+                <span>{bookingResult.passenger_id}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+function App() {
+  return (
     <div className="layout">
       <nav className="sidebar">
         <div className="brand">
           <div className="logo-icon">✈</div>
-          <h2>Clear Sky</h2>
+          <h2>ClearFly</h2>
         </div>
         <ul className="nav-links">
-          <li className="active">Dashboard</li>
-          <li>My Flights</li>
-          <li>Settings</li>
+          <li><NavLink to="/" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Бронирования</NavLink></li>
+          <li><NavLink to="/baggage" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Багаж</NavLink></li>
+          <li><NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Аналитика</NavLink></li>
+          <li><NavLink to="/profile" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Профиль</NavLink></li>
         </ul>
       </nav>
 
       <main className="main-content">
-        <header>
-          <h1>Passenger Dashboard</h1>
-          <p className="subtitle">Welcome back. Ready for your next adventure?</p>
-        </header>
-
-        <section className="dashboard-cards">
-          <div className="card glass-effect animate-in">
-            <h3>Find Your Booking</h3>
-            <p>Enter your Booking ID (UUID) to see details.</p>
-            <form onSubmit={fetchBooking} className="search-form">
-              <input 
-                type="text" 
-                placeholder="e.g. 123e4567-e89b..." 
-                value={bookingId}
-                onChange={(e) => setBookingId(e.target.value)}
-                required
-              />
-              <button type="submit" disabled={loading}>
-                {loading ? 'Searching...' : 'Search'}
-              </button>
-            </form>
-          </div>
-
-          <div className="card glass-effect highlight animate-in" style={{ animationDelay: '0.1s' }}>
-            <h3>Fast Track</h3>
-            <p>Need a quick test booking? Generate an instant test reservation.</p>
-            <button className="primary-btn" onClick={createFakeBooking} disabled={loading}>
-              Create Demo Booking
-            </button>
-          </div>
-        </section>
-
-        {error && (
-          <div className="alert error animate-in">
-            <strong>Error:</strong> {error}
-          </div>
-        )}
-
-        {bookingResult && (
-          <section className="results-section animate-in">
-            <h2>{bookingResult.isNew ? 'Booking Created!' : 'Booking Details'}</h2>
-            <div className="ticket">
-              <div className="ticket-header">
-                <span className="status">{bookingResult.status}</span>
-                <span className="booking-id">ID: {bookingResult.id}</span>
-              </div>
-              <div className="ticket-body">
-                <div className="info-group">
-                  <label>Flight ID</label>
-                  <span>{bookingResult.flight_id}</span>
-                </div>
-                <div className="info-group">
-                  <label>Passenger ID</label>
-                  <span>{bookingResult.passenger_id}</span>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/baggage" element={<BaggagePage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+        </Routes>
       </main>
     </div>
   );

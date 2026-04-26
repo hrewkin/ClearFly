@@ -12,6 +12,7 @@ services:
       retries: 3
     depends_on:
       - booking
+      - passenger
       - incident
       - baggage
       - analytics
@@ -30,6 +31,18 @@ services:
     depends_on:
       - postgres
       - redis
+
+  passenger:
+    build: ../services/passenger
+    restart: on-failure
+    ports:
+      - "8082:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASS=postgres
+    depends_on:
+      - postgres
 
   incident:
     build: ../services/incident

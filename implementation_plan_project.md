@@ -113,3 +113,40 @@
 - Реализован алгоритм предложения адаптивной цены: если загрузка > 80%, цена увеличивается на 50% (`suggested_price`), до 80% — на 20%.
 - Gateway дополнен проксированием запросов на роут `/api/v1/analytics/...`.
 *Проект успешно сведен в единую 3-слойную микросервисную архитектуру по изначальному плану.*
+
+**26 Апреля 2026 г. — Финализация по плану (полный аудит и доработка)**
+*Подпись: ИИ-ассистент Antigravity*
+
+**1. Создан микросервис `passenger`:**
+- Полноценный CRUD-сервис профилей пассажиров (Create/Get/Update/Delete).
+- 3-слойная архитектура: `delivery` → `usecase` → `repository` (PostgreSQL).
+- Таблица `passengers` (id, name, email, phone, passport_number) создаётся автоматически при старте.
+- Unit-тесты HTTP-хендлеров с mock-сервисом.
+- Добавлен в `docker-compose.yml` (порт 8082) и в `gateway` (роут `/api/v1/passengers`).
+
+**2. Расширение WebUI:**
+- Добавлена зависимость `react-router-dom` для клиентской маршрутизации.
+- Создана страница «Трекинг багажа» (`BaggagePage.jsx`) — поиск багажа по UUID, отображение статуса/локации.
+- Создана страница «Аналитика» (`AnalyticsPage.jsx`) — загрузка рейса, цветовая индикация load factor, рекомендуемая цена.
+- Создана страница «Профиль» (`ProfilePage.jsx`) — поиск и создание профиля пассажира.
+- Навигация обновлена: sidebar теперь использует `NavLink` с 4 маршрутами (Бронирования, Багаж, Аналитика, Профиль).
+
+**3. Линтер-конфиги `.golangci.yml`:**
+- Добавлены для всех Go-сервисов: `baggage`, `incident`, `analytics`, `gateway`, `passenger`.
+
+**4. Тесты:**
+- Написаны unit-тесты `booking/internal/delivery/handler_test.go` (Create success/bad request, Get success/invalid ID/not found).
+- Написаны unit-тесты `incident/internal/delivery/handler_test.go` (Create success/bad request).
+
+**5. Usecase-слой для единообразия архитектуры:**
+- Создан `analytics/internal/usecase/service.go` — вынесена логика ценообразования.
+- Создан `baggage/internal/usecase/service.go` — обёртка над репозиторием.
+
+**6. HTTP API для `incident`:**
+- Создан `incident/internal/delivery/handler.go` — POST `/incidents` для ручного создания инцидентов.
+- Обновлён `incident/cmd/main.go` — теперь запускает RabbitMQ-consumer И HTTP-сервер одновременно.
+- Обновлён `incident/go.mod` — добавлена зависимость `gin-gonic/gin`.
+- Добавлено проксирование `/api/v1/incidents` в `gateway`.
+
+*Все пункты из implementation_plan_project.md теперь реализованы. Проект полностью соответствует плану.*
+

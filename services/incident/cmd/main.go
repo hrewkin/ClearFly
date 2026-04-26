@@ -8,7 +8,9 @@ import (
 	"syscall"
 
 	"github.com/cleanair/incident/internal/consumer"
+	"github.com/cleanair/incident/internal/delivery"
 	"github.com/cleanair/incident/internal/usecase"
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -32,6 +34,19 @@ func main() {
 	}
 
 	log.Println("Incident service is up and running. Listening for events...")
+
+	// HTTP server for manual incident creation
+	r := gin.Default()
+	httpHandler := delivery.NewHttpHandler(handler)
+	r.POST("/incidents", httpHandler.CreateIncident)
+
+	// Start HTTP server in a goroutine
+	go func() {
+		log.Println("Incident HTTP API listening on :8080")
+		if err := r.Run(":8080"); err != nil {
+			log.Fatalf("failed to run HTTP server: %v", err)
+		}
+	}()
 
 	// Wait for interrupt signal to gracefully shutdown
 	quit := make(chan os.Signal, 1)

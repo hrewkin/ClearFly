@@ -32,11 +32,23 @@ func main() {
 		api.Any("/bookings", func(c *gin.Context) {
 			proxyReq(c, "http://booking:8080", "/bookings")
 		})
+		api.Any("/passengers/*path", func(c *gin.Context) {
+			proxyReq(c, "http://passenger:8080", "/passengers")
+		})
+		api.Any("/passengers", func(c *gin.Context) {
+			proxyReq(c, "http://passenger:8080", "/passengers")
+		})
 		api.Any("/baggage/*path", func(c *gin.Context) {
 			proxyReq(c, "http://baggage:8080", "/baggage")
 		})
 		api.Any("/baggage", func(c *gin.Context) {
 			proxyReq(c, "http://baggage:8080", "/baggage")
+		})
+		api.Any("/incidents/*path", func(c *gin.Context) {
+			proxyReq(c, "http://incident:8080", "/incidents")
+		})
+		api.Any("/incidents", func(c *gin.Context) {
+			proxyReq(c, "http://incident:8080", "/incidents")
 		})
 		api.Any("/analytics/*path", func(c *gin.Context) {
 			proxyReq(c, "http://analytics:8080", "/analytics")

@@ -1,10 +1,12 @@
-module github.com/cleanair/incident
+module github.com/cleanair/passenger
 
 go 1.25.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/rabbitmq/amqp091-go v1.8.1
+	github.com/google/uuid v1.6.0
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
 )
 
 require (
