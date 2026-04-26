@@ -72,8 +72,31 @@ export const api = {
   updatePassenger: (id, payload) => request('PUT', `/passengers/${id}`, payload),
   updatePreferences: (id, payload) => request('PATCH', `/passengers/${id}/preferences`, payload),
 
+  listBaggage: (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.passenger_id) qs.set('passenger_id', params.passenger_id);
+    if (params.limit) qs.set('limit', params.limit);
+    const s = qs.toString();
+    return request('GET', `/baggage${s ? `?${s}` : ''}`);
+  },
+  createBaggage: (payload) => request('POST', '/baggage', payload),
+  scanBaggage: (id, payload = {}) => request('POST', `/baggage/${id}/scan`, payload),
+
   flightLoadFactor: (id) => request('GET', `/analytics/load-factor/${id}`),
 };
+
+export const BAGGAGE_STAGES = [
+  { key: 'CHECKED_IN', label: 'Сдан', icon: '🧳', location: 'Стойка регистрации' },
+  { key: 'SCREENED', label: 'Досмотрен', icon: '🛂', location: 'Интроскоп' },
+  { key: 'LOADED', label: 'Загружен', icon: '📦', location: 'Багажный люк' },
+  { key: 'IN_FLIGHT', label: 'В полёте', icon: '✈️', location: 'На борту' },
+  { key: 'UNLOADED', label: 'Выгружен', icon: '📤', location: 'Багажная лента' },
+  { key: 'CLAIMED', label: 'Получен', icon: '✅', location: 'Выдан пассажиру' },
+];
+
+export function baggageStageIndex(status) {
+  return BAGGAGE_STAGES.findIndex((s) => s.key === status);
+}
 
 export function formatPrice(amount, currency = 'RUB') {
   if (amount == null) return '';

@@ -24,6 +24,8 @@ type BaggageStatus struct {
 type Repository interface {
 	Upsert(ctx context.Context, bag *BaggageStatus) error
 	GetByID(ctx context.Context, id uuid.UUID) (*BaggageStatus, error)
+	List(ctx context.Context, limit int) ([]BaggageStatus, error)
+	ListByPassenger(ctx context.Context, passengerID uuid.UUID) ([]BaggageStatus, error)
 }
 
 type postgresRepo struct {
@@ -56,4 +58,27 @@ func (r *postgresRepo) GetByID(ctx context.Context, id uuid.UUID) (*BaggageStatu
 		return nil, err
 	}
 	return &bag, nil
+}
+
+func (r *postgresRepo) List(ctx context.Context, limit int) ([]BaggageStatus, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	var bags []BaggageStatus
+	query := `SELECT id, passenger_id, flight_id, status, location, updated_at FROM baggage_tracking ORDER BY updated_at DESC LIMIT $1`
+	err := r.db.SelectContext(ctx, &bags, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	return bags, nil
+}
+
+func (r *postgresRepo) ListByPassenger(ctx context.Context, passengerID uuid.UUID) ([]BaggageStatus, error) {
+	var bags []BaggageStatus
+	query := `SELECT id, passenger_id, flight_id, status, location, updated_at FROM baggage_tracking WHERE passenger_id=$1 ORDER BY updated_at DESC`
+	err := r.db.SelectContext(ctx, &bags, query, passengerID)
+	if err != nil {
+		return nil, err
+	}
+	return bags, nil
 }

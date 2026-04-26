@@ -14,8 +14,10 @@ import (
 )
 
 type mockRepo struct {
-	getByIDFunc func(ctx context.Context, id uuid.UUID) (*repository.BaggageStatus, error)
-	upsertFunc  func(ctx context.Context, b *repository.BaggageStatus) error
+	getByIDFunc          func(ctx context.Context, id uuid.UUID) (*repository.BaggageStatus, error)
+	upsertFunc           func(ctx context.Context, b *repository.BaggageStatus) error
+	listFunc             func(ctx context.Context, limit int) ([]repository.BaggageStatus, error)
+	listByPassengerFunc  func(ctx context.Context, passengerID uuid.UUID) ([]repository.BaggageStatus, error)
 }
 
 func (m *mockRepo) GetByID(ctx context.Context, id uuid.UUID) (*repository.BaggageStatus, error) {
@@ -30,6 +32,20 @@ func (m *mockRepo) Upsert(ctx context.Context, b *repository.BaggageStatus) erro
 		return m.upsertFunc(ctx, b)
 	}
 	return nil
+}
+
+func (m *mockRepo) List(ctx context.Context, limit int) ([]repository.BaggageStatus, error) {
+	if m.listFunc != nil {
+		return m.listFunc(ctx, limit)
+	}
+	return nil, nil
+}
+
+func (m *mockRepo) ListByPassenger(ctx context.Context, passengerID uuid.UUID) ([]repository.BaggageStatus, error) {
+	if m.listByPassengerFunc != nil {
+		return m.listByPassengerFunc(ctx, passengerID)
+	}
+	return nil, nil
 }
 
 func TestGetBaggage_Success(t *testing.T) {
