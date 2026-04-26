@@ -169,7 +169,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="gauge-legend">
                 <div><small>Забронировано</small><strong>{selectedLoad?.analytics?.total_bookings ?? 0}</strong></div>
-                <div><small>Вместимость</small><strong>{selected.aircraft ? '—' : 150}</strong></div>
+                <div><small>Вместимость</small><strong>{selected.total_seats || 150}</strong></div>
                 <div><small>Рекомендуемая цена</small><strong>{formatPrice(suggested)}</strong></div>
                 <div><small>Множитель</small><strong>×{tier.multiplier}</strong></div>
               </div>
