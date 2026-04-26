@@ -1,24 +1,50 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { airportShort, api, formatPrice, formatTime } from '../api';
 
-function AnalyticsPage() {
-  const [flightId, setFlightId] = useState('');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+function pricingTier(factor) {
+  if (factor > 80) return { label: '×1.5 — высокий спрос', tone: 'danger', multiplier: 1.5 };
+  if (factor > 50) return { label: '×1.2 — средний спрос', tone: 'warning', multiplier: 1.2 };
+  return { label: '×1.0 — базовая цена', tone: 'success', multiplier: 1.0 };
+}
+
+function loadColor(factor) {
+  if (factor > 80) return 'var(--danger)';
+  if (factor > 50) return 'var(--warning)';
+  return 'var(--success)';
+}
+
+export default function AnalyticsPage() {
+  const [flights, setFlights] = useState([]);
+  const [loads, setLoads] = useState({}); // flight_id -> analytics
+  const [selectedId, setSelectedId] = useState('');
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchAnalytics = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setResult(null);
+  const selected = useMemo(
+    () => flights.find((f) => f.id === selectedId) || flights[0] || null,
+    [flights, selectedId],
+  );
+  const selectedLoad = selected ? loads[selected.id] : null;
 
+  const load = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/v1/analytics/load-factor/${flightId}`);
-      if (!res.ok) {
-        throw new Error('Данные не найдены');
-      }
-      const data = await res.json();
-      setResult(data);
+      const upcoming = await api.upcomingFlights();
+      const list = upcoming || [];
+      setFlights(list);
+
+      const analytics = await Promise.all(
+        list.slice(0, 10).map((f) =>
+          api.flightLoadFactor(f.id)
+            .then((data) => ({ id: f.id, data }))
+            .catch(() => ({ id: f.id, data: null })),
+        ),
+      );
+      const map = {};
+      analytics.forEach(({ id, data }) => {
+        if (data) map[id] = data;
+      });
+      setLoads(map);
+      setError('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -26,71 +52,140 @@ function AnalyticsPage() {
     }
   };
 
-  const getLoadColor = (factor) => {
-    if (factor > 80) return '#ef4444';
-    if (factor > 50) return '#f59e0b';
-    return '#10b981';
-  };
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 7000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (loading && flights.length === 0) {
+    return <div className="loading">Загружаем данные…</div>;
+  }
+
+  const fleetLoads = flights.slice(0, 10).map((f) => loads[f.id]?.analytics?.load_factor ?? 0);
+  const avgLoad = fleetLoads.length ? Math.round(fleetLoads.reduce((a, b) => a + b, 0) / fleetLoads.length) : 0;
+  const maxLoad = fleetLoads.length ? Math.max(...fleetLoads) : 0;
+  const totalBookings = flights.reduce(
+    (acc, f) => acc + (loads[f.id]?.analytics?.total_bookings ?? 0),
+    0,
+  );
+
+  const factor = selectedLoad?.analytics?.load_factor ?? 0;
+  const tier = pricingTier(factor);
+  const suggested = selectedLoad?.suggested_price ?? 0;
+  const gaugeDeg = Math.min(factor, 100) * 3.6;
 
   return (
     <>
-      <header>
-        <h1>Аналитика рейсов</h1>
-        <p className="subtitle">Загрузка рейсов и рекомендации по ценообразованию</p>
+      <header className="page-header">
+        <div>
+          <h1>Аналитика рейсов</h1>
+          <p className="subtitle">Загрузка флота в реальном времени и рекомендации динамического ценообразования.</p>
+        </div>
       </header>
 
-      <section className="dashboard-cards">
-        <div className="card glass-effect animate-in">
-          <h3>Анализ загрузки рейса</h3>
-          <p>Введите ID рейса для получения коэффициента загрузки и рекомендуемой цены.</p>
-          <form onSubmit={fetchAnalytics} className="search-form">
-            <input
-              type="text"
-              placeholder="e.g. 123e4567-e89b-12d3-..."
-              value={flightId}
-              onChange={(e) => setFlightId(e.target.value)}
-              required
-            />
-            <button type="submit" disabled={loading}>
-              {loading ? 'Анализ...' : 'Анализировать'}
-            </button>
-          </form>
+      {error && <div className="alert error">{error}</div>}
+
+      <section className="kpi-row">
+        <div className="kpi-card">
+          <div className="kpi-icon">📊</div>
+          <div className="kpi-info">
+            <strong>{avgLoad}%</strong>
+            <span>Средняя загрузка</span>
+            <small>по {fleetLoads.length} ближайшим рейсам</small>
+          </div>
+        </div>
+        <div className="kpi-card kpi-warning">
+          <div className="kpi-icon">🔥</div>
+          <div className="kpi-info">
+            <strong>{maxLoad}%</strong>
+            <span>Пиковая загрузка</span>
+            <small>автоматический коэффициент цены</small>
+          </div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-icon">🎟️</div>
+          <div className="kpi-info">
+            <strong>{totalBookings}</strong>
+            <span>Активных бронирований</span>
+            <small>на ближайшие рейсы</small>
+          </div>
         </div>
       </section>
 
-      {error && (
-        <div className="alert error animate-in">
-          <strong>Ошибка:</strong> {error}
+      <section className="analytics-grid-main">
+        <div className="card glass-effect">
+          <div className="card-head">
+            <h3>Рейс для анализа</h3>
+            <small className="muted">{flights.length} в горизонте 24 ч</small>
+          </div>
+          <ul className="analytics-flight-list">
+            {flights.slice(0, 10).map((f) => {
+              const l = loads[f.id]?.analytics?.load_factor ?? 0;
+              const isActive = selected && selected.id === f.id;
+              return (
+                <li
+                  key={f.id}
+                  className={`analytics-flight ${isActive ? 'active' : ''}`}
+                  onClick={() => setSelectedId(f.id)}
+                >
+                  <div className="analytics-flight-head">
+                    <strong>{f.flight_number}</strong>
+                    <span className="muted">{airportShort(f.origin)} → {airportShort(f.destination)} · {formatTime(f.departure_time)}</span>
+                  </div>
+                  <div className="load-bar">
+                    <div
+                      className="load-bar-fill"
+                      style={{ width: `${Math.min(l, 100)}%`, background: loadColor(l) }}
+                    />
+                  </div>
+                  <small className="muted">{l}% · {loads[f.id]?.analytics?.total_bookings ?? 0} мест</small>
+                </li>
+              );
+            })}
+            {flights.length === 0 && <li className="empty-state">Нет рейсов в ближайшие сутки.</li>}
+          </ul>
         </div>
-      )}
 
-      {result && (
-        <section className="results-section animate-in">
-          <h2>Результаты анализа</h2>
-          <div className="analytics-grid">
-            <div className="card glass-effect">
-              <h3>Загрузка рейса</h3>
-              <div className="metric-value" style={{ color: getLoadColor(result.analytics?.load_factor || 0) }}>
-                {result.analytics?.load_factor || 0}%
+        {selected && (
+          <div className="card glass-effect">
+            <div className="card-head">
+              <div>
+                <h3>{selected.flight_number}</h3>
+                <small className="muted">{airportShort(selected.origin)} → {airportShort(selected.destination)} · {formatTime(selected.departure_time)}</small>
               </div>
-              <p>Забронировано мест: {result.analytics?.total_bookings || 0} / 150</p>
+              <span className={`tag tone-${tier.tone}`}>{tier.label}</span>
             </div>
-            <div className="card glass-effect">
-              <h3>Рекомендуемая цена</h3>
-              <div className="metric-value" style={{ color: 'var(--accent)' }}>
-                ${result.suggested_price?.toFixed(2)}
+
+            <div className="gauge-wrap">
+              <div
+                className="gauge"
+                style={{ background: `conic-gradient(${loadColor(factor)} ${gaugeDeg}deg, rgba(255,255,255,0.08) ${gaugeDeg}deg)` }}
+              >
+                <div className="gauge-inner">
+                  <strong>{factor}%</strong>
+                  <small>Load factor</small>
+                </div>
               </div>
-              <p>
-                {result.analytics?.load_factor > 80 && 'Высокий спрос — коэффициент ×1.5'}
-                {result.analytics?.load_factor > 50 && result.analytics?.load_factor <= 80 && 'Средний спрос — коэффициент ×1.2'}
-                {result.analytics?.load_factor <= 50 && 'Базовая цена'}
-              </p>
+              <div className="gauge-legend">
+                <div><small>Забронировано</small><strong>{selectedLoad?.analytics?.total_bookings ?? 0}</strong></div>
+                <div><small>Вместимость</small><strong>{selected.aircraft ? '—' : 150}</strong></div>
+                <div><small>Рекомендуемая цена</small><strong>{formatPrice(suggested)}</strong></div>
+                <div><small>Множитель</small><strong>×{tier.multiplier}</strong></div>
+              </div>
+            </div>
+
+            <div className="pricing-rules">
+              <h4>Правила динамического ценообразования</h4>
+              <ul>
+                <li className={factor <= 50 ? 'rule-active' : ''}><span>≤ 50%</span> базовый тариф ×1.0</li>
+                <li className={factor > 50 && factor <= 80 ? 'rule-active' : ''}><span>50–80%</span> ×1.2 — повышенный спрос</li>
+                <li className={factor > 80 ? 'rule-active' : ''}><span>&gt; 80%</span> ×1.5 — пиковая загрузка</li>
+              </ul>
             </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </>
   );
 }
-
-export default AnalyticsPage;

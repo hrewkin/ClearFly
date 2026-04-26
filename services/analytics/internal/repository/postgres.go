@@ -33,8 +33,18 @@ func (r *postgresRepo) GetFlightLoad(ctx context.Context, flightID string) (*Ana
 		return &AnalyticsResult{TotalBookings: 0, LoadFactor: 0}, nil
 	}
 
-	// Simplistic load factor formula: capacity = 150
-	loadFactor := (total * 100) / 150
+	// Pull real capacity from the flights table; fall back to 150 if the
+	// flights table isn't available yet or the row is missing.
+	capacity := 150
+	_ = r.db.GetContext(ctx, &capacity, `SELECT total_seats FROM flights WHERE id = $1`, flightID)
+	if capacity <= 0 {
+		capacity = 150
+	}
+
+	loadFactor := (total * 100) / capacity
+	if loadFactor > 100 {
+		loadFactor = 100
+	}
 
 	return &AnalyticsResult{
 		TotalBookings: total,

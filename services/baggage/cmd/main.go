@@ -61,7 +61,10 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok", "service": "baggage"})
 	})
 	h := delivery.NewHttpHandler(repo)
+	r.GET("/baggage", h.ListBaggage)
+	r.POST("/baggage", h.CreateBaggage)
 	r.GET("/baggage/:id", h.GetBaggage)
+	r.POST("/baggage/:id/scan", h.Scan)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("failed to run server: %v", err)
