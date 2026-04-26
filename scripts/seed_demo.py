@@ -16,7 +16,7 @@ Stdlib-only (urllib) so no pip install required.
 Usage:
     python3 scripts/seed_demo.py
     python3 scripts/seed_demo.py --base-url http://host.docker.internal:8080
-    python3 scripts/seed_demo.py --passengers 30 --reset
+    python3 scripts/seed_demo.py --passengers 30 --seed 1337
 """
 from __future__ import annotations
 
