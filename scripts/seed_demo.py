@@ -162,9 +162,9 @@ def book_seats_on_flight(api: Api, flight: dict, passengers: list[dict], target_
     """Book up to `target_pct` of the flight's seats. Returns bookings made."""
     seats = api.get(f"/flights/{flight['id']}/seats") or []
     available = [s for s in seats if s.get("status") == "AVAILABLE"]
+    rnd.shuffle(available)
     want = int(len(seats) * target_pct / 100)
     to_book = available[:want]
-    rnd.shuffle(to_book)
     made = 0
     for seat in to_book:
         passenger = rnd.choice(passengers)
