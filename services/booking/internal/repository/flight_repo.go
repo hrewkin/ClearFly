@@ -68,6 +68,28 @@ func (r *postgresFlightRepo) GetAvailableSeats(ctx context.Context, flightID uui
 	return seats, nil
 }
 
+func (r *postgresFlightRepo) GetSeatsByFlight(ctx context.Context, flightID uuid.UUID) ([]usecase.Seat, error) {
+	var seats []usecase.Seat
+	query := `SELECT id, flight_id, seat_number, class, status, booking_id
+	           FROM seats WHERE flight_id=$1 ORDER BY seat_number`
+	err := r.db.SelectContext(ctx, &seats, query, flightID)
+	if err != nil {
+		return nil, err
+	}
+	return seats, nil
+}
+
+func (r *postgresFlightRepo) GetSeatByID(ctx context.Context, seatID uuid.UUID) (*usecase.Seat, error) {
+	var s usecase.Seat
+	query := `SELECT id, flight_id, seat_number, class, status, booking_id
+	           FROM seats WHERE id=$1`
+	err := r.db.GetContext(ctx, &s, query, seatID)
+	if err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
 func (r *postgresFlightRepo) BlockSeat(ctx context.Context, seatID uuid.UUID, bookingID uuid.UUID) error {
 	// Atomic seat blocking with SELECT FOR UPDATE
 	tx, err := r.db.BeginTxx(ctx, nil)
@@ -117,4 +139,54 @@ func (r *postgresFlightRepo) GetTariff(ctx context.Context, flightID uuid.UUID, 
 		return nil, err
 	}
 	return &t, nil
+}
+
+func (r *postgresFlightRepo) ListTariffs(ctx context.Context, flightID uuid.UUID) ([]usecase.Tariff, error) {
+	var ts []usecase.Tariff
+	query := `SELECT id, flight_id, class, base_price, currency FROM tariffs WHERE flight_id=$1 ORDER BY base_price`
+	err := r.db.SelectContext(ctx, &ts, query, flightID)
+	if err != nil {
+		return nil, err
+	}
+	return ts, nil
+}
+
+func (r *postgresFlightRepo) CreateSeats(ctx context.Context, seats []usecase.Seat) error {
+	if len(seats) == 0 {
+		return nil
+	}
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	stmt, err := tx.PreparexContext(ctx,
+		`INSERT INTO seats (id, flight_id, seat_number, class, status, booking_id)
+		 VALUES ($1,$2,$3,$4,$5,$6)
+		 ON CONFLICT (flight_id, seat_number) DO NOTHING`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	for _, s := range seats {
+		if _, err := stmt.ExecContext(ctx, s.ID, s.FlightID, s.SeatNumber, s.Class, s.Status, s.BookingID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *postgresFlightRepo) UpcomingFlights(ctx context.Context, limit int) ([]usecase.Flight, error) {
+	var flights []usecase.Flight
+	query := `SELECT id, flight_number, origin, destination, departure_time, arrival_time,
+	           aircraft_type, total_seats, available_seats, gate, status
+	           FROM flights
+	           WHERE departure_time >= NOW() - INTERVAL '24 hours'
+	           ORDER BY departure_time ASC
+	           LIMIT $1`
+	err := r.db.SelectContext(ctx, &flights, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	return flights, nil
 }

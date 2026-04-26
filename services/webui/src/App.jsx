@@ -1,126 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import './App.css';
 import './index.css';
+import HomePage from './pages/HomePage';
+import FlightSearchPage from './pages/FlightSearchPage';
+import BookingFlowPage from './pages/BookingFlowPage';
+import NotificationsPage from './pages/NotificationsPage';
+import OperationsPage from './pages/OperationsPage';
 import BaggagePage from './pages/BaggagePage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ProfilePage from './pages/ProfilePage';
 
-function DashboardPage() {
-  const [bookingId, setBookingId] = useState('');
-  const [bookingResult, setBookingResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const fetchBooking = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setBookingResult(null);
-
-    try {
-      const res = await fetch(`http://localhost:8080/api/v1/bookings/${bookingId}`);
-      if (!res.ok) {
-        throw new Error('Booking not found');
-      }
-      const data = await res.json();
-      setBookingResult(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createFakeBooking = async () => {
-    setLoading(true);
-    setError('');
-    setBookingResult(null);
-
-    try {
-      const flightId = "123e4567-e89b-12d3-a456-426614174000";
-      const passengerId = "123e4567-e89b-12d3-a456-426614174001";
-      const res = await fetch(`http://localhost:8080/api/v1/bookings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flight_id: flightId, passenger_id: passengerId })
-      });
-      if (!res.ok) {
-        throw new Error('Failed to create booking');
-      }
-      const data = await res.json();
-      setBookingResult({ ...data, isNew: true });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <header>
-        <h1>Панель управления</h1>
-        <p className="subtitle">Добро пожаловать. Готовы к следующему приключению?</p>
-      </header>
-
-      <section className="dashboard-cards">
-        <div className="card glass-effect animate-in">
-          <h3>Найти бронирование</h3>
-          <p>Введите ID бронирования (UUID) для просмотра деталей.</p>
-          <form onSubmit={fetchBooking} className="search-form">
-            <input 
-              type="text" 
-              placeholder="e.g. 123e4567-e89b..." 
-              value={bookingId}
-              onChange={(e) => setBookingId(e.target.value)}
-              required
-            />
-            <button type="submit" disabled={loading}>
-              {loading ? 'Поиск...' : 'Найти'}
-            </button>
-          </form>
-        </div>
-
-        <div className="card glass-effect highlight animate-in" style={{ animationDelay: '0.1s' }}>
-          <h3>Быстрое бронирование</h3>
-          <p>Нужно тестовое бронирование? Создайте мгновенную демо-резервацию.</p>
-          <button className="primary-btn" onClick={createFakeBooking} disabled={loading}>
-            Создать демо-бронирование
-          </button>
-        </div>
-      </section>
-
-      {error && (
-        <div className="alert error animate-in">
-          <strong>Ошибка:</strong> {error}
-        </div>
-      )}
-
-      {bookingResult && (
-        <section className="results-section animate-in">
-          <h2>{bookingResult.isNew ? 'Бронирование создано!' : 'Детали бронирования'}</h2>
-          <div className="ticket">
-            <div className="ticket-header">
-              <span className="status">{bookingResult.status}</span>
-              <span className="booking-id">ID: {bookingResult.id}</span>
-            </div>
-            <div className="ticket-body">
-              <div className="info-group">
-                <label>ID Рейса</label>
-                <span>{bookingResult.flight_id}</span>
-              </div>
-              <div className="info-group">
-                <label>ID Пассажира</label>
-                <span>{bookingResult.passenger_id}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-    </>
-  );
-}
+const NAV = [
+  { to: '/', label: 'Обзор', icon: '✦', exact: true },
+  { to: '/search', label: 'Поиск рейсов', icon: '✈' },
+  { to: '/notifications', label: 'Уведомления', icon: '🔔' },
+  { to: '/operations', label: 'Операции', icon: '⚙' },
+  { to: '/baggage', label: 'Багаж', icon: '🧳' },
+  { to: '/analytics', label: 'Аналитика', icon: '📊' },
+  { to: '/profile', label: 'Профиль', icon: '👤' },
+];
 
 function App() {
   return (
@@ -129,18 +28,37 @@ function App() {
         <div className="brand">
           <div className="logo-icon">✈</div>
           <h2>ClearFly</h2>
+          <small className="brand-subtitle">Чистое небо</small>
         </div>
         <ul className="nav-links">
-          <li><NavLink to="/" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Бронирования</NavLink></li>
-          <li><NavLink to="/baggage" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Багаж</NavLink></li>
-          <li><NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Аналитика</NavLink></li>
-          <li><NavLink to="/profile" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>Профиль</NavLink></li>
+          {NAV.map((n) => (
+            <li key={n.to}>
+              <NavLink
+                to={n.to}
+                end={n.exact}
+                className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+              >
+                <span className="nav-icon" aria-hidden>{n.icon}</span>
+                <span>{n.label}</span>
+              </NavLink>
+            </li>
+          ))}
         </ul>
+        <div className="sidebar-footer">
+          <div className="ops-status">
+            <span className="dot ok" />
+            <span>Все системы работают</span>
+          </div>
+        </div>
       </nav>
 
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<DashboardPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/search" element={<FlightSearchPage />} />
+          <Route path="/book/:flightId" element={<BookingFlowPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
+          <Route path="/operations" element={<OperationsPage />} />
           <Route path="/baggage" element={<BaggagePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/profile" element={<ProfilePage />} />

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,10 +50,15 @@ type FlightRepository interface {
 	UpdateFlightStatus(ctx context.Context, id uuid.UUID, status, gate string) error
 
 	GetAvailableSeats(ctx context.Context, flightID uuid.UUID) ([]Seat, error)
+	GetSeatsByFlight(ctx context.Context, flightID uuid.UUID) ([]Seat, error)
+	GetSeatByID(ctx context.Context, seatID uuid.UUID) (*Seat, error)
 	BlockSeat(ctx context.Context, seatID uuid.UUID, bookingID uuid.UUID) error
+	CreateSeats(ctx context.Context, seats []Seat) error
+	UpcomingFlights(ctx context.Context, limit int) ([]Flight, error)
 
 	CreateTariff(ctx context.Context, t *Tariff) error
 	GetTariff(ctx context.Context, flightID uuid.UUID, class string) (*Tariff, error)
+	ListTariffs(ctx context.Context, flightID uuid.UUID) ([]Tariff, error)
 }
 
 // FlightService defines business logic for flight management.
@@ -62,7 +68,12 @@ type FlightService interface {
 	SearchFlights(ctx context.Context, origin, destination, date string) ([]Flight, error)
 	UpdateFlightStatus(ctx context.Context, id uuid.UUID, status, gate string) error
 	GetAvailableSeats(ctx context.Context, flightID uuid.UUID) ([]Seat, error)
+	GetSeatsByFlight(ctx context.Context, flightID uuid.UUID) ([]Seat, error)
 	CreateTariff(ctx context.Context, flightID uuid.UUID, class string, price float64, currency string) (*Tariff, error)
+	GetTariff(ctx context.Context, flightID uuid.UUID, class string) (*Tariff, error)
+	ListTariffs(ctx context.Context, flightID uuid.UUID) ([]Tariff, error)
+	CreateSeatLayout(ctx context.Context, flightID uuid.UUID, totalSeats int) error
+	UpcomingFlights(ctx context.Context, limit int) ([]Flight, error)
 }
 
 type flightService struct {
@@ -97,6 +108,82 @@ func (s *flightService) UpdateFlightStatus(ctx context.Context, id uuid.UUID, st
 
 func (s *flightService) GetAvailableSeats(ctx context.Context, flightID uuid.UUID) ([]Seat, error) {
 	return s.repo.GetAvailableSeats(ctx, flightID)
+}
+
+func (s *flightService) GetSeatsByFlight(ctx context.Context, flightID uuid.UUID) ([]Seat, error) {
+	return s.repo.GetSeatsByFlight(ctx, flightID)
+}
+
+func (s *flightService) GetTariff(ctx context.Context, flightID uuid.UUID, class string) (*Tariff, error) {
+	return s.repo.GetTariff(ctx, flightID, class)
+}
+
+func (s *flightService) ListTariffs(ctx context.Context, flightID uuid.UUID) ([]Tariff, error) {
+	return s.repo.ListTariffs(ctx, flightID)
+}
+
+// CreateSeatLayout generates a deterministic seat layout for the given
+// flight: 2 BUSINESS rows (4 seats per row, columns A,B,C,D) followed by
+// ECONOMY rows of 6 seats each (A,B,C,D,E,F) until totalSeats is reached.
+func (s *flightService) CreateSeatLayout(ctx context.Context, flightID uuid.UUID, totalSeats int) error {
+	if totalSeats <= 0 {
+		return nil
+	}
+	const businessRows = 2
+	const businessCols = "ABCD"
+	const economyCols = "ABCDEF"
+
+	seats := make([]Seat, 0, totalSeats)
+	row := 1
+	count := 0
+
+	for r := 0; r < businessRows && count < totalSeats; r++ {
+		for _, col := range businessCols {
+			if count >= totalSeats {
+				break
+			}
+			seats = append(seats, Seat{
+				ID:         uuid.New(),
+				FlightID:   flightID,
+				SeatNumber: seatNumber(row, string(col)),
+				Class:      "BUSINESS",
+				Status:     "AVAILABLE",
+			})
+			count++
+		}
+		row++
+	}
+	// Skip a row to leave a gap between business and economy.
+	row++
+	for count < totalSeats {
+		for _, col := range economyCols {
+			if count >= totalSeats {
+				break
+			}
+			seats = append(seats, Seat{
+				ID:         uuid.New(),
+				FlightID:   flightID,
+				SeatNumber: seatNumber(row, string(col)),
+				Class:      "ECONOMY",
+				Status:     "AVAILABLE",
+			})
+			count++
+		}
+		row++
+	}
+	return s.repo.CreateSeats(ctx, seats)
+}
+
+// UpcomingFlights returns next scheduled flights ordered by departure time.
+func (s *flightService) UpcomingFlights(ctx context.Context, limit int) ([]Flight, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	return s.repo.UpcomingFlights(ctx, limit)
+}
+
+func seatNumber(row int, col string) string {
+	return fmt.Sprintf("%02d%s", row, col)
 }
 
 func (s *flightService) CreateTariff(ctx context.Context, flightID uuid.UUID, class string, price float64, currency string) (*Tariff, error) {

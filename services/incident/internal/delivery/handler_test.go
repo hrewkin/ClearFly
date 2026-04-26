@@ -14,7 +14,7 @@ import (
 func TestCreateIncident_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	handler := usecase.NewIncidentHandler()
+	handler := usecase.NewIncidentHandler(nil)
 	httpHandler := NewHttpHandler(handler)
 
 	router := gin.Default()
@@ -46,7 +46,7 @@ func TestCreateIncident_Success(t *testing.T) {
 func TestCreateIncident_BadRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	handler := usecase.NewIncidentHandler()
+	handler := usecase.NewIncidentHandler(nil)
 	httpHandler := NewHttpHandler(handler)
 
 	router := gin.Default()

@@ -20,7 +20,7 @@ func TestHandleIncident_Cancelled(t *testing.T) {
 	w := &logWriter{}
 	log.SetOutput(w)
 
-	handler := NewIncidentHandler()
+	handler := NewIncidentHandler(nil)
 	event := IncidentEvent{
 		Type:     "FLIGHT_CANCELLED",
 		FlightID: "FL999",
@@ -48,7 +48,7 @@ func TestHandleIncident_Delayed(t *testing.T) {
 	w := &logWriter{}
 	log.SetOutput(w)
 
-	handler := NewIncidentHandler()
+	handler := NewIncidentHandler(nil)
 	event := IncidentEvent{
 		Type:     "FLIGHT_DELAYED",
 		FlightID: "FL888",
@@ -76,7 +76,7 @@ func TestHandleIncident_Unknown(t *testing.T) {
 	w := &logWriter{}
 	log.SetOutput(w)
 
-	handler := NewIncidentHandler()
+	handler := NewIncidentHandler(nil)
 	event := IncidentEvent{
 		Type:     "UNKNOWN_EVENT",
 		FlightID: "FL777",
