@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, formatTime, formatDate } from '../api';
+import { isAdmin, useAuth } from '../auth';
 
 const TYPE_META = {
   BOOKING_CONFIRMED: { icon: '🎟️', tone: 'success', label: 'Бронирование' },
@@ -14,6 +15,9 @@ function meta(type) {
 }
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
+  const passengerId = user?.passenger_id;
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -21,7 +25,11 @@ export default function NotificationsPage() {
 
   const load = async () => {
     try {
-      const data = await api.listNotifications();
+      const data = admin
+        ? await api.listNotifications()
+        : passengerId
+          ? await api.listNotificationsByPassenger(passengerId)
+          : [];
       setItems(data || []);
       setError('');
     } catch (err) {
@@ -35,14 +43,19 @@ export default function NotificationsPage() {
     load();
     timerRef.current = setInterval(load, 4000);
     return () => clearInterval(timerRef.current);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admin, passengerId]);
 
   return (
     <>
       <header className="page-header">
         <div>
           <h1>Уведомления</h1>
-          <p className="subtitle">Лента событий по рейсам и бронированиям. Обновляется автоматически.</p>
+          <p className="subtitle">
+            {admin
+              ? 'Все события по рейсам и бронированиям. Обновляется автоматически.'
+              : 'События по вашим бронированиям и рейсам. Обновляется автоматически.'}
+          </p>
         </div>
         <button className="ghost-btn" onClick={load} disabled={loading}>↻ Обновить</button>
       </header>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, airportLabel, airportShort, durationLabel, formatDate, formatPrice, formatTime } from '../api';
+import { api, airportLabel, airportShort, durationLabel, flightStatusLabel, formatDate, formatPrice, formatTime } from '../api';
+import { isAdmin, useAuth } from '../auth';
 
 const POPULAR_ROUTES = [
   { from: 'SVO', to: 'LED' },
@@ -26,6 +27,8 @@ export default function FlightSearchPage() {
   const [error, setError] = useState('');
   const [searched, setSearched] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const admin = isAdmin(user);
 
   useEffect(() => {
     let mounted = true;
@@ -116,7 +119,7 @@ export default function FlightSearchPage() {
             <div className="flight-meta">
               <span className="flight-number">{flight.flight_number}</span>
               <span className={`flight-status status-${(flight.status || 'SCHEDULED').toLowerCase()}`}>
-                {flight.status || 'SCHEDULED'}
+                {flightStatusLabel(flight.status)}
               </span>
               <span className="flight-aircraft">{flight.aircraft_type}</span>
             </div>
@@ -142,9 +145,13 @@ export default function FlightSearchPage() {
                 <strong>{flight.available_seats}</strong>
                 <span>свободно из {flight.total_seats}</span>
               </div>
-              <button className="primary-btn" onClick={() => navigate(`/book/${flight.id}`)}>
-                Выбрать место
-              </button>
+              {admin ? (
+                <span className="muted small">Админ не бронирует</span>
+              ) : (
+                <button className="primary-btn" onClick={() => navigate(`/book/${flight.id}`)}>
+                  Выбрать место
+                </button>
+              )}
             </div>
           </article>
         ))}

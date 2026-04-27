@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { airportShort, api, durationLabel, formatPrice, formatTime } from '../api';
+import { airportShort, api, durationLabel, flightStatusLabel, formatPrice, formatTime } from '../api';
+import { isAdmin, useAuth } from '../auth';
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
+  const passengerId = user?.passenger_id;
   const [flights, setFlights] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [error, setError] = useState('');
@@ -10,16 +14,21 @@ export default function HomePage() {
 
   useEffect(() => {
     let mounted = true;
+    const notifPromise = admin
+      ? api.listNotifications()
+      : passengerId
+        ? api.listNotificationsByPassenger(passengerId)
+        : Promise.resolve([]);
     Promise.all([
       api.upcomingFlights().catch(() => []),
-      api.listNotifications().catch(() => []),
+      notifPromise.catch(() => []),
     ]).then(([f, n]) => {
       if (!mounted) return;
       setFlights(f || []);
       setNotifications((n || []).slice(0, 4));
     }).catch((err) => mounted && setError(err.message));
     return () => { mounted = false; };
-  }, []);
+  }, [admin, passengerId]);
 
   const totalSeats = flights.reduce((s, f) => s + (f.total_seats || 0), 0);
   const availableSeats = flights.reduce((s, f) => s + (f.available_seats || 0), 0);
@@ -32,7 +41,12 @@ export default function HomePage() {
           <h1>Чистое небо для каждого пассажира</h1>
           <p className="subtitle">Микросервисная платформа для бронирования рейсов с динамическими тарифами и реальной шиной событий.</p>
         </div>
-        <button className="primary-btn" onClick={() => navigate('/search')}>Найти рейс →</button>
+        <button
+          className="primary-btn"
+          onClick={() => navigate(admin ? '/operations' : '/search')}
+        >
+          {admin ? 'В центр операций →' : 'Найти рейс →'}
+        </button>
       </header>
 
       <section className="kpi-row">
@@ -60,8 +74,10 @@ export default function HomePage() {
                   <small>{durationLabel(f.departure_time, f.arrival_time)} · выход {f.gate || '—'}</small>
                 </div>
                 <div className="meta">
-                  <span className={`tag tone-${(f.status || 'SCHEDULED').toLowerCase()}`}>{f.status || 'SCHEDULED'}</span>
-                  <button className="ghost-btn" onClick={() => navigate(`/book/${f.id}`)}>Забронировать</button>
+                  <span className={`tag tone-${(f.status || 'SCHEDULED').toLowerCase()}`}>{flightStatusLabel(f.status)}</span>
+                  {!admin && (
+                    <button className="ghost-btn" onClick={() => navigate(`/book/${f.id}`)}>Забронировать</button>
+                  )}
                 </div>
               </li>
             ))}
@@ -90,25 +106,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="features">
-        <FeatureCard
-          title="Атомарное распределение мест"
-          desc="SELECT … FOR UPDATE предотвращает двойное бронирование даже при пиковой нагрузке."
-        />
-        <FeatureCard
-          title="Шина событий RabbitMQ"
-          desc="Бронирование, изменения рейсов и регистрация публикуются в очередь и доходят до пассажира."
-        />
-        <FeatureCard
-          title="Динамические тарифы"
-          desc="Цена пересчитывается по фактору загрузки: до +50% для последних мест."
-        />
-      </section>
-
-      <section className="cta-row">
-        <button className="primary-btn" onClick={() => navigate('/search')}>Поиск рейса</button>
-        <button className="ghost-btn" onClick={() => navigate('/operations')}>Открыть центр операций</button>
-      </section>
     </>
   );
 }
@@ -123,15 +120,6 @@ function KpiCard({ icon, label, value, hint, tone = 'default' }) {
         <small>{hint}</small>
       </div>
     </div>
-  );
-}
-
-function FeatureCard({ title, desc }) {
-  return (
-    <article className="feature-card">
-      <h4>{title}</h4>
-      <p>{desc}</p>
-    </article>
   );
 }
 

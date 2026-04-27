@@ -519,12 +519,31 @@ button.chip {
 /* Search page */
 .search-card .search-grid {
   display: grid;
-  grid-template-columns: 1fr 24px 1fr 200px auto;
+  grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr) 190px 180px;
   gap: 1rem;
   align-items: end;
 }
-@media (max-width: 900px) {
+.search-card .search-grid .primary-btn {
+  height: 46px;
+  white-space: nowrap;
+  padding: 0 1.25rem;
+  align-self: end;
+}
+.search-card .search-grid .field input[type="date"] {
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .search-card .search-grid {
+    grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1fr);
+  }
+  .search-card .search-grid > .field:nth-of-type(3),
+  .search-card .search-grid > .primary-btn {
+    grid-column: span 3;
+  }
+}
+@media (max-width: 640px) {
   .search-card .search-grid { grid-template-columns: 1fr; }
+  .search-card .search-grid > * { grid-column: span 1 !important; }
   .field-arrow { display: none; }
 }
 .field {
@@ -542,6 +561,92 @@ button.chip {
 }
 .field input:focus, .field select:focus { border-color: var(--accent); outline: none; }
 .field small { color: var(--text-muted); font-size: 0.78rem; }
+.field.field-error input, .field.field-error select {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 1px rgba(239,68,68,0.3);
+}
+.field-error-msg { color: #fca5a5 !important; font-size: 0.78rem; margin-top: 0.2rem; }
+
+/* Auth pages */
+.auth-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(59,130,246,0.15), transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(168,85,247,0.15), transparent 50%),
+    var(--bg-main);
+}
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 2.25rem;
+}
+.auth-card h2 { margin: 1rem 0 0.35rem; }
+.auth-card form { display: grid; gap: 1rem; margin-top: 1rem; }
+.auth-card .field { font-size: 0.9rem; }
+.auth-card .field input { padding: 0.8rem 1rem; }
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.auth-brand h1 { margin: 0; font-size: 1.5rem; }
+.auth-brand small { color: var(--text-muted); font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; }
+.auth-footer { text-align: center; margin-top: 1.25rem; color: var(--text-muted); font-size: 0.9rem; }
+.auth-footer a { color: var(--accent); }
+.auth-card code { background: rgba(0,0,0,0.25); padding: 0 0.25rem; border-radius: 4px; font-size: 0.9em; }
+
+/* Sidebar user pill */
+.sidebar-user {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.sidebar-user-name { font-weight: 600; color: var(--text-main); }
+.sidebar-user-role { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.logout-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 0.45rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.logout-btn:hover { border-color: #ef4444; color: #fca5a5; }
+
+.my-bookings { display: grid; gap: 1rem; margin-top: 1.25rem; }
+.my-booking { padding: 1.25rem 1.5rem; }
+.my-booking .mb-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+.my-booking .mb-head small { display: block; color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.my-booking .pnr { font-family: monospace; font-size: 1.1rem; letter-spacing: 0.1em; color: var(--accent); }
+.my-booking .price { color: var(--text-main); font-weight: 700; font-size: 1.1rem; }
+.my-booking .mb-route {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.my-booking .mb-route .bp-side { display: flex; flex-direction: column; gap: 0.1rem; }
+.my-booking .mb-route .bp-side strong { font-size: 1.15rem; }
+.my-booking .mb-route .bp-side small { color: var(--text-muted); font-size: 0.78rem; }
+.my-booking .mb-route .bp-side span { color: var(--text-muted); font-size: 0.85rem; }
+.my-booking .mb-route .bp-arrow { flex: 1; text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+.my-booking .mb-meta { margin-top: 0.75rem; display: flex; gap: 1.25rem; flex-wrap: wrap; color: var(--text-muted); font-size: 0.85rem; }
+.my-booking .mb-meta strong { color: var(--text-main); }
 .field-arrow {
   font-size: 1.4rem;
   color: var(--text-muted);

@@ -68,6 +68,9 @@ func main() {
 		api.Any("/notifications", func(c *gin.Context) {
 			proxyReq(c, "http://notification:8080", "/notifications")
 		})
+		api.Any("/auth/*path", func(c *gin.Context) {
+			proxyReq(c, "http://passenger:8080", "/auth")
+		})
 	}
 
 	log.Println("Gateway listening on :8080")

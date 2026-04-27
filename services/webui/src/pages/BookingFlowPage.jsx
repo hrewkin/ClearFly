@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { airportShort, api, durationLabel, formatPrice, formatTime } from '../api';
+import { useAuth } from '../auth';
 
 const ECONOMY_LAYOUT = ['A', 'B', 'C', 'D', 'E', 'F'];
 const BUSINESS_LAYOUT = ['A', 'B', 'C', 'D'];
@@ -33,6 +34,7 @@ function classLayout(rowClass) {
 export default function BookingFlowPage() {
   const { flightId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [flight, setFlight] = useState(null);
   const [seats, setSeats] = useState([]);
   const [tariffs, setTariffs] = useState([]);
@@ -42,10 +44,16 @@ export default function BookingFlowPage() {
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
 
-  const [passengerName, setPassengerName] = useState('Иван Петров');
-  const [email, setEmail] = useState('ivan.petrov@example.com');
-  const [phone, setPhone] = useState('+7 999 123-45-67');
-  const [passport, setPassport] = useState('45 12 678901');
+  const [passengerName, setPassengerName] = useState(user?.full_name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [phone, setPhone] = useState('');
+  const [passport, setPassport] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  useEffect(() => {
+    if (user?.full_name && !passengerName) setPassengerName(user.full_name);
+    if (user?.email && !email) setEmail(user.email);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     let mounted = true;
@@ -75,17 +83,59 @@ export default function BookingFlowPage() {
 
   const selectedTariff = selectedSeat ? tariffByClass[selectedSeat.class] : null;
 
+  const validate = () => {
+    const errs = {};
+    const name = passengerName.trim();
+    const words = name.split(/\s+/).filter(Boolean);
+    if (!name) errs.name = 'Укажите ФИО';
+    else if (words.length < 2) errs.name = 'Введите имя и фамилию (минимум)';
+    else if (!/^[А-Яа-яЁёA-Za-z\-\s]+$/.test(name)) errs.name = 'Только буквы, дефис и пробел';
+    else if (name.length < 4) errs.name = 'Слишком короткое ФИО';
+
+    const mail = email.trim();
+    if (!mail) errs.email = 'Укажите email';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) errs.email = 'Некорректный email';
+
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (!phone.trim()) errs.phone = 'Укажите телефон';
+    else if (phoneDigits.length < 10 || phoneDigits.length > 15) errs.phone = 'Телефон должен содержать 10–15 цифр';
+
+    const pass = passport.replace(/\s/g, '');
+    if (!pass) errs.passport = 'Укажите паспорт';
+    else if (!/^\d{10}$/.test(pass)) errs.passport = 'Паспорт РФ: серия 4 цифры + номер 6 цифр';
+
+    return errs;
+  };
+
   const onConfirm = async () => {
     if (!selectedSeat || !flight) return;
+    const errs = validate();
+    setFieldErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      setError('Проверьте корректность полей пассажира.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
-      const passenger = await api.createPassenger({
-        name: passengerName,
-        email,
-        phone,
-        passport_number: passport,
-      });
+      let passenger;
+      if (user?.passenger_id) {
+        const existing = await api.getPassenger(user.passenger_id);
+        passenger = await api.updatePassenger(user.passenger_id, {
+          ...existing,
+          name: passengerName,
+          email,
+          phone,
+          passport_number: passport,
+        });
+      } else {
+        passenger = await api.createPassenger({
+          name: passengerName,
+          email,
+          phone,
+          passport_number: passport,
+        });
+      }
       const booking = await api.bookSeat({
         flight_id: flight.id,
         passenger_id: passenger.id,
@@ -191,7 +241,7 @@ export default function BookingFlowPage() {
             {rows.filter((row) => row.class === 'BUSINESS').map((row) => (
               <SeatRow key={`bus-${row.row}`} row={row} selected={selectedSeat} onSelect={setSelectedSeat} />
             ))}
-            <div className="seat-map-cabin">Экономический класс</div>
+            <div className="seat-map-cabin">Эконом-класс</div>
             {rows.filter((row) => row.class !== 'BUSINESS').map((row) => (
               <SeatRow key={`eco-${row.row}`} row={row} selected={selectedSeat} onSelect={setSelectedSeat} />
             ))}
@@ -206,21 +256,25 @@ export default function BookingFlowPage() {
 
         <aside className="card glass-effect">
           <h3>Данные пассажира</h3>
-          <label className="field">
+          <label className={`field${fieldErrors.name ? ' field-error' : ''}`}>
             <span>ФИО</span>
-            <input value={passengerName} onChange={(e) => setPassengerName(e.target.value)} />
+            <input value={passengerName} onChange={(e) => { setPassengerName(e.target.value); if (fieldErrors.name) setFieldErrors({ ...fieldErrors, name: undefined }); }} placeholder="Иван Петров" />
+            {fieldErrors.name && <small className="field-error-msg">{fieldErrors.name}</small>}
           </label>
-          <label className="field">
+          <label className={`field${fieldErrors.email ? ' field-error' : ''}`}>
             <span>Email</span>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors({ ...fieldErrors, email: undefined }); }} placeholder="name@example.com" />
+            {fieldErrors.email && <small className="field-error-msg">{fieldErrors.email}</small>}
           </label>
-          <label className="field">
+          <label className={`field${fieldErrors.phone ? ' field-error' : ''}`}>
             <span>Телефон</span>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <input value={phone} onChange={(e) => { setPhone(e.target.value); if (fieldErrors.phone) setFieldErrors({ ...fieldErrors, phone: undefined }); }} placeholder="+7 999 123-45-67" />
+            {fieldErrors.phone && <small className="field-error-msg">{fieldErrors.phone}</small>}
           </label>
-          <label className="field">
-            <span>Паспорт</span>
-            <input value={passport} onChange={(e) => setPassport(e.target.value)} />
+          <label className={`field${fieldErrors.passport ? ' field-error' : ''}`}>
+            <span>Паспорт РФ (серия и номер)</span>
+            <input value={passport} onChange={(e) => { setPassport(e.target.value); if (fieldErrors.passport) setFieldErrors({ ...fieldErrors, passport: undefined }); }} placeholder="45 12 678901" />
+            {fieldErrors.passport && <small className="field-error-msg">{fieldErrors.passport}</small>}
           </label>
 
           <div className="summary">
