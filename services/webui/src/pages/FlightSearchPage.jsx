@@ -85,7 +85,6 @@ export default function FlightSearchPage() {
           <label className="field">
             <span>Дата</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            <small>Расписание на выбранный день</small>
           </label>
           <button className="primary-btn" type="submit" disabled={loading}>
             {loading ? 'Ищем…' : 'Найти рейсы'}

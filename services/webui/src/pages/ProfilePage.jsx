@@ -328,7 +328,6 @@ export default function ProfilePage() {
                     <span className="loyalty-icon">{tier.icon}</span>{tier.label}
                     <small>{profile.loyalty_points ?? 0} б</small>
                   </span>
-
                 </div>
               )}
             </div>
