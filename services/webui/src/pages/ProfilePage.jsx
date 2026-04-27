@@ -306,21 +306,31 @@ export default function ProfilePage() {
             </div>
 
             <div className="pref-group">
-              <small>Статус лояльности</small>
-              <div className="pref-options tier-options">
-                {Object.entries(LOYALTY_TIERS).map(([key, meta]) => (
-                  <button
-                    key={key}
-                    className={`pref-option ${profile.loyalty_tier === key ? 'selected' : ''}`}
-                    onClick={() => onTierBump(key)}
-                    disabled={loading}
-                    type="button"
-                  >
-                    <span className="pref-icon">{meta.icon}</span>
-                    <span>{meta.label}</span>
-                  </button>
-                ))}
-              </div>
+              <small>Статус лояльности{!admin && ' (меняет администратор)'}</small>
+              {admin ? (
+                <div className="pref-options tier-options">
+                  {Object.entries(LOYALTY_TIERS).map(([key, meta]) => (
+                    <button
+                      key={key}
+                      className={`pref-option ${profile.loyalty_tier === key ? 'selected' : ''}`}
+                      onClick={() => onTierBump(key)}
+                      disabled={loading}
+                      type="button"
+                    >
+                      <span className="pref-icon">{meta.icon}</span>
+                      <span>{meta.label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="loyalty-readonly">
+                  <span className={`tag tone-${tier.tone} loyalty-tag`}>
+                    <span className="loyalty-icon">{tier.icon}</span>{tier.label}
+                    <small>{profile.loyalty_points ?? 0} б</small>
+                  </span>
+                  <span className="muted loyalty-hint">Повышается администратором по итогам полётов.</span>
+                </div>
+              )}
             </div>
           </div>
         </section>
