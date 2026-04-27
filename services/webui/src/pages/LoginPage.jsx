@@ -38,7 +38,7 @@ export default function LoginPage() {
           </div>
         </div>
         <h2>Вход</h2>
-        <p className="muted small">Введите email и пароль. Для админа: <code>admin</code> / <code>admin</code>.</p>
+        <p className="muted small">Введите email и пароль.</p>
         <form onSubmit={submit}>
           <label className="field">
             <span>Email или логин</span>
