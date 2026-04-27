@@ -120,7 +120,9 @@ export default function BookingFlowPage() {
     try {
       let passenger;
       if (user?.passenger_id) {
+        const existing = await api.getPassenger(user.passenger_id);
         passenger = await api.updatePassenger(user.passenger_id, {
+          ...existing,
           name: passengerName,
           email,
           phone,

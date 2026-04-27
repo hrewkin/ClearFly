@@ -141,6 +141,13 @@ func (s *Service) Register(ctx context.Context, email, password, fullName string
 		return nil, "", ErrEmailTaken
 	}
 
+	// Hash password before creating any records, so cheap failures don't
+	// leave orphaned rows.
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, "", err
+	}
+
 	pax := &usecase.Passenger{
 		ID:             uuid.New(),
 		Name:           fullName,
@@ -151,10 +158,6 @@ func (s *Service) Register(ctx context.Context, email, password, fullName string
 		MealPreference: "STANDARD",
 	}
 	if err := s.passengers.Create(ctx, pax); err != nil {
-		return nil, "", err
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
 		return nil, "", err
 	}
 	paxID := pax.ID
@@ -168,6 +171,10 @@ func (s *Service) Register(ctx context.Context, email, password, fullName string
 		CreatedAt:    time.Now().UTC(),
 	}
 	if err := s.users.Create(ctx, u); err != nil {
+		// Roll back the passenger we just created so we don't leave an
+		// orphaned profile when, for example, a concurrent registration
+		// claims the same email between the GetByEmail check and this insert.
+		_ = s.passengers.Delete(context.Background(), pax.ID)
 		return nil, "", err
 	}
 	token, err := s.issueToken(u)
