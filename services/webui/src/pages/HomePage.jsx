@@ -50,10 +50,10 @@ export default function HomePage() {
       </header>
 
       <section className="kpi-row">
-        <KpiCard icon="✈" label="Активных рейсов" value={flights.length} hint="на ближайшие сутки" />
-        <KpiCard icon="🪑" label="Свободных мест" value={availableSeats} hint={`из ${totalSeats}`} />
-        <KpiCard icon="📊" label="Загрузка флота" value={`${loadFactor}%`} hint="в реальном времени" tone={loadFactor > 70 ? 'warning' : 'ok'} />
-        <KpiCard icon="🔔" label="События за сутки" value={notifications.length} hint="нотификации" />
+        <KpiCard icon="▸" label="Активных рейсов" value={flights.length} hint="на ближайшие сутки" />
+        <KpiCard icon="◇" label="Свободных мест" value={availableSeats} hint={`из ${totalSeats}`} />
+        <KpiCard icon="⊿" label="Загрузка флота" value={`${loadFactor}%`} hint="в реальном времени" tone={loadFactor > 70 ? 'warning' : 'ok'} />
+        <KpiCard icon="◉" label="События за сутки" value={notifications.length} hint="нотификации" />
       </section>
 
       <section className="home-grid">
