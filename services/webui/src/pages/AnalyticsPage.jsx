@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
 
       <section className="kpi-row">
         <div className="kpi-card">
-          <div className="kpi-icon">📊</div>
+          <div className="kpi-icon">⊿</div>
           <div className="kpi-info">
             <strong>{avgLoad}%</strong>
             <span>Средняя загрузка</span>
@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className="kpi-card kpi-warning">
-          <div className="kpi-icon">🔥</div>
+          <div className="kpi-icon">△</div>
           <div className="kpi-info">
             <strong>{maxLoad}%</strong>
             <span>Пиковая загрузка</span>
@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon">🎟️</div>
+          <div className="kpi-icon">⊞</div>
           <div className="kpi-info">
             <strong>{totalBookings}</strong>
             <span>Активных бронирований</span>

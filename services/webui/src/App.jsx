@@ -16,14 +16,14 @@ import MyBookingsPage from './pages/MyBookingsPage';
 import { AuthProvider, isAdmin, useAuth } from './auth';
 
 const NAV = [
-  { to: '/', label: 'Обзор', icon: '✦', exact: true, roles: ['admin', 'passenger'] },
-  { to: '/search', label: 'Поиск рейсов', icon: '✈', roles: ['admin', 'passenger'] },
-  { to: '/my-bookings', label: 'Мои брони', icon: '🎟', roles: ['passenger'] },
-  { to: '/notifications', label: 'Уведомления', icon: '🔔', roles: ['admin', 'passenger'] },
-  { to: '/operations', label: 'Операции', icon: '⚙', roles: ['admin'] },
-  { to: '/baggage', label: 'Багаж', icon: '🧳', roles: ['admin', 'passenger'] },
-  { to: '/analytics', label: 'Аналитика', icon: '📊', roles: ['admin'] },
-  { to: '/profile', label: 'Профиль', icon: '👤', roles: ['admin', 'passenger'] },
+  { to: '/', label: 'Обзор', icon: '◈', exact: true, roles: ['admin', 'passenger'] },
+  { to: '/search', label: 'Поиск рейсов', icon: '▸', roles: ['admin', 'passenger'] },
+  { to: '/my-bookings', label: 'Мои брони', icon: '⊞', roles: ['passenger'] },
+  { to: '/notifications', label: 'Уведомления', icon: '◉', roles: ['admin', 'passenger'] },
+  { to: '/operations', label: 'Операции', icon: '⎔', roles: ['admin'] },
+  { to: '/baggage', label: 'Багаж', icon: '⊡', roles: ['admin', 'passenger'] },
+  { to: '/analytics', label: 'Аналитика', icon: '⊿', roles: ['admin'] },
+  { to: '/profile', label: 'Профиль', icon: '◎', roles: ['admin', 'passenger'] },
 ];
 
 function Shell({ children }) {
