@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { airportShort, api, formatTime } from '../api';
+import { airportShort, api, flightStatusLabel, formatTime } from '../api';
 
 const PRESET_REASONS = {
   FLIGHT_DELAYED: 'Метеоусловия в аэропорту прибытия',
@@ -113,7 +113,7 @@ export default function OperationsPage() {
                 <span className="flight-number">{f.flight_number}</span>
                 <span>{airportShort(f.origin)} → {airportShort(f.destination)}</span>
                 <span className="muted">{formatTime(f.departure_time)}</span>
-                <span className={`tag tone-${(f.status || 'SCHEDULED').toLowerCase()}`}>{f.status || 'SCHEDULED'}</span>
+                <span className={`tag tone-${(f.status || 'SCHEDULED').toLowerCase()}`}>{flightStatusLabel(f.status)}</span>
               </li>
             ))}
             {flights.length === 0 && <li className="empty-state">Нет ближайших рейсов.</li>}

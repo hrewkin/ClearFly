@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useAuth, isAdmin } from '../auth';
 
 const MEAL_OPTIONS = [
   { value: 'STANDARD', label: 'Стандарт', icon: '🍽️' },
@@ -39,6 +40,8 @@ function loyaltyMeta(tier) {
 }
 
 export default function ProfilePage() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
   const [searchId, setSearchId] = useState('');
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -69,6 +72,13 @@ export default function ProfilePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.passenger_id && !profile) {
+      loadProfile(user.passenger_id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.passenger_id]);
 
   const onSearch = (e) => {
     e.preventDefault();
@@ -157,14 +167,17 @@ export default function ProfilePage() {
           <h1>Профиль пассажира</h1>
           <p className="subtitle">Лояльность, предпочтения по питанию и особые потребности — всё в одном месте.</p>
         </div>
-        <button className="ghost-btn" onClick={() => setShowCreate((v) => !v)}>
-          {showCreate ? 'Скрыть форму' : '+ Новый пассажир'}
-        </button>
+        {admin && (
+          <button className="ghost-btn" onClick={() => setShowCreate((v) => !v)}>
+            {showCreate ? 'Скрыть форму' : '+ Новый пассажир'}
+          </button>
+        )}
       </header>
 
       {error && <div className="alert error">{error}</div>}
       {success && <div className="alert success">{success}</div>}
 
+      {admin && (
       <section className="card glass-effect profile-search-card">
         <form onSubmit={onSearch} className="profile-search-form">
           <label className="field">
@@ -191,8 +204,9 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+      )}
 
-      {showCreate && (
+      {admin && showCreate && (
         <section className="card glass-effect animate-in">
           <h3>Регистрация пассажира</h3>
           <div className="quick-fill">
@@ -314,7 +328,9 @@ export default function ProfilePage() {
 
       {!profile && !loading && !error && (
         <div className="empty-state">
-          Введите ID пассажира или создайте нового. Данные профиля используются во время бронирования и в посадочных ведомостях экипажа.
+          {admin
+            ? 'Введите ID пассажира или создайте нового. Данные профиля используются во время бронирования и в посадочных ведомостях экипажа.'
+            : 'У вас пока не заполнен профиль пассажира. Забронируйте рейс — и данные появятся здесь.'}
         </div>
       )}
     </>

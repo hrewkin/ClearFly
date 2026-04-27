@@ -31,15 +31,41 @@ export function airportShort(code) {
   return AIRPORT_NAMES[code]?.split(' ')[0] ?? code;
 }
 
+const AUTH_TOKEN_KEY = 'clearfly_token';
+
+export function getAuthToken() {
+  try { return localStorage.getItem(AUTH_TOKEN_KEY) || ''; } catch { return ''; }
+}
+
+export function setAuthToken(token) {
+  try {
+    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+    else localStorage.removeItem(AUTH_TOKEN_KEY);
+  } catch { /* ignore storage errors */ }
+}
+
 async function request(method, path, body) {
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  const token = getAuthToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}/api/v1${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    throw new Error(text || `${method} ${path} failed: ${res.status}`);
+    let msg = res.statusText;
+    try {
+      const text = await res.text();
+      if (text) {
+        try {
+          const j = JSON.parse(text);
+          msg = j.error || j.message || text;
+        } catch { msg = text; }
+      }
+    } catch { /* ignore body parse errors */ }
+    throw new Error(msg || `${method} ${path} failed: ${res.status}`);
   }
   if (res.status === 204) return null;
   return res.json();
@@ -83,6 +109,12 @@ export const api = {
   scanBaggage: (id, payload = {}) => request('POST', `/baggage/${id}/scan`, payload),
 
   flightLoadFactor: (id) => request('GET', `/analytics/load-factor/${id}`),
+
+  authRegister: (payload) => request('POST', '/auth/register', payload),
+  authLogin: (payload) => request('POST', '/auth/login', payload),
+  authMe: () => request('GET', '/auth/me'),
+
+  listNotificationsByPassenger: (id) => request('GET', `/notifications/${id}`),
 };
 
 export const BAGGAGE_STAGES = [
@@ -113,6 +145,47 @@ export function formatDate(value) {
   if (!value) return '';
   const d = new Date(value);
   return d.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
+}
+
+const FLIGHT_STATUS_LABELS = {
+  SCHEDULED: 'Запланирован',
+  DELAYED: 'Задержан',
+  CANCELLED: 'Отменён',
+  BOARDING: 'Посадка',
+  DEPARTED: 'Вылетел',
+  ARRIVED: 'Прибыл',
+  COMPLETED: 'Завершён',
+  GATE_CHANGED: 'Смена выхода',
+};
+
+export function flightStatusLabel(status) {
+  if (!status) return FLIGHT_STATUS_LABELS.SCHEDULED;
+  return FLIGHT_STATUS_LABELS[status] || status;
+}
+
+const BOOKING_STATUS_LABELS = {
+  CONFIRMED: 'Подтверждено',
+  CANCELLED: 'Отменено',
+  PENDING: 'Ожидает оплаты',
+  CHECKED_IN: 'Регистрация пройдена',
+};
+
+export function bookingStatusLabel(status) {
+  if (!status) return '';
+  return BOOKING_STATUS_LABELS[status] || status;
+}
+
+const INCIDENT_LABELS = {
+  FLIGHT_DELAYED: 'Задержка',
+  FLIGHT_CANCELLED: 'Отмена',
+  GATE_CHANGED: 'Смена выхода',
+  BOARDING: 'Посадка',
+  DEPARTURE: 'Вылет',
+};
+
+export function incidentLabel(type) {
+  if (!type) return '';
+  return INCIDENT_LABELS[type] || type;
 }
 
 export function durationLabel(start, end) {

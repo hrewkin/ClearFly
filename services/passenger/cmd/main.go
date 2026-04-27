@@ -1,14 +1,18 @@
 package main
 
 import (
+	"context"
+	"log"
+	"os"
+	"time"
+
+	"github.com/cleanair/passenger/internal/auth"
 	"github.com/cleanair/passenger/internal/delivery"
 	"github.com/cleanair/passenger/internal/repository"
 	"github.com/cleanair/passenger/internal/usecase"
 	"github.com/gin-gonic/gin"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"log"
-	"os"
 )
 
 func main() {
@@ -55,6 +59,19 @@ func main() {
 	repo := repository.NewPostgresPassengerRepo(db)
 	svc := usecase.NewPassengerService(repo)
 
+	authRepo := auth.NewRepository(db)
+	if err := authRepo.Migrate(context.Background()); err != nil {
+		log.Fatalf("auth migration failed: %v", err)
+	}
+	secret := os.Getenv("AUTH_SECRET")
+	if secret == "" {
+		secret = "clearfly-dev-secret-change-me"
+	}
+	authSvc := auth.NewService(authRepo, repo, []byte(secret), 24*time.Hour)
+	if err := authSvc.EnsureAdmin(context.Background(), "admin", "admin"); err != nil {
+		log.Printf("ensure admin warning: %v", err)
+	}
+
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "service": "passenger"})
@@ -65,6 +82,11 @@ func main() {
 	r.PUT("/passengers/:id", h.UpdatePassenger)
 	r.PATCH("/passengers/:id/preferences", h.UpdatePreferences)
 	r.DELETE("/passengers/:id", h.DeletePassenger)
+
+	authH := delivery.NewAuthHandler(authSvc)
+	r.POST("/auth/register", authH.Register)
+	r.POST("/auth/login", authH.Login)
+	r.GET("/auth/me", authH.Me)
 
 	// Run server
 	log.Println("Passenger service listening on :8080")
