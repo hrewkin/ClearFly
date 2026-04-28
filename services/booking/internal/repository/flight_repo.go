@@ -123,6 +123,37 @@ func (r *postgresFlightRepo) BlockSeat(ctx context.Context, seatID uuid.UUID, bo
 	return tx.Commit()
 }
 
+// ReleaseSeat marks the given seat as AVAILABLE again and increments the
+// flight's available_seats counter. Idempotent: a seat that is already
+// available is a no-op.
+func (r *postgresFlightRepo) ReleaseSeat(ctx context.Context, seatID uuid.UUID) error {
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	var status string
+	err = tx.GetContext(ctx, &status, `SELECT status FROM seats WHERE id=$1 FOR UPDATE`, seatID)
+	if err != nil {
+		return err
+	}
+	if status == "AVAILABLE" {
+		return tx.Commit()
+	}
+
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE seats SET status='AVAILABLE', booking_id=NULL WHERE id=$1`, seatID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE flights SET available_seats = available_seats + 1
+		 WHERE id = (SELECT flight_id FROM seats WHERE id=$1)`, seatID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (r *postgresFlightRepo) CreateTariff(ctx context.Context, t *usecase.Tariff) error {
 	query := `INSERT INTO tariffs (id, flight_id, class, base_price, currency)
 	           VALUES ($1,$2,$3,$4,$5)

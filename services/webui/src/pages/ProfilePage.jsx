@@ -52,6 +52,11 @@ export default function ProfilePage() {
   const [form, setForm] = useState({ name: '', email: '', phone: '', passport_number: '' });
   const [createdRecently, setCreatedRecently] = useState([]);
 
+  const [staffForm, setStaffForm] = useState({ full_name: '', email: '', employee_id: '', password: '' });
+  const [staffBusy, setStaffBusy] = useState(false);
+  const [staffMsg, setStaffMsg] = useState('');
+  const [staffErr, setStaffErr] = useState('');
+
   useEffect(() => {
     if (!success) return;
     const t = setTimeout(() => setSuccess(''), 3000);
@@ -204,6 +209,68 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+      )}
+
+      {admin && (
+        <section className="card glass-effect">
+          <h3>Создать аккаунт сотрудника</h3>
+          <p className="muted small">
+            Аккаунт открывается под уникальный табельный номер. Сотрудник сможет войти по email и паролю и получит доступ к манифесту рейса и оформлению возвратов.
+          </p>
+          <form
+            className="profile-grid"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setStaffErr('');
+              setStaffMsg('');
+              const f = {
+                full_name: staffForm.full_name.trim(),
+                email: staffForm.email.trim(),
+                employee_id: staffForm.employee_id.trim(),
+                password: staffForm.password,
+              };
+              if (!f.full_name || f.full_name.split(/\s+/).filter(Boolean).length < 2) { setStaffErr('Введите ФИО (минимум имя и фамилия)'); return; }
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(f.email)) { setStaffErr('Некорректный email'); return; }
+              if (!f.employee_id) { setStaffErr('Укажите табельный номер'); return; }
+              if (f.password.length < 8 || !/[A-Za-zА-Яа-я]/.test(f.password) || !/\d/.test(f.password)) { setStaffErr('Пароль: 8+ символов, буквы и цифры'); return; }
+              setStaffBusy(true);
+              try {
+                const created = await api.authRegisterStaff(f);
+                setStaffMsg(`Сотрудник создан: ${created.user.full_name} (${created.user.employee_id})`);
+                setStaffForm({ full_name: '', email: '', employee_id: '', password: '' });
+              } catch (err) {
+                setStaffErr(err.message || 'Не удалось создать сотрудника');
+              } finally {
+                setStaffBusy(false);
+              }
+            }}
+          >
+            <label className="field">
+              <span>ФИО</span>
+              <input value={staffForm.full_name} onChange={(e) => setStaffForm({ ...staffForm, full_name: e.target.value })} placeholder="Сергей Иванов" required />
+            </label>
+            <label className="field">
+              <span>Email / логин</span>
+              <input type="email" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} placeholder="ivanov@clearfly.aero" required />
+            </label>
+            <label className="field">
+              <span>Табельный номер</span>
+              <input value={staffForm.employee_id} onChange={(e) => setStaffForm({ ...staffForm, employee_id: e.target.value })} placeholder="EMP-1001" required />
+            </label>
+            <label className="field">
+              <span>Временный пароль</span>
+              <input type="password" value={staffForm.password} onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })} required />
+              <small className="field-hint">8+ символов, буквы и цифры</small>
+            </label>
+            <div className="profile-grid-actions">
+              <button type="submit" className="primary-btn" disabled={staffBusy}>
+                {staffBusy ? 'Создаём…' : 'Создать сотрудника'}
+              </button>
+            </div>
+          </form>
+          {staffErr && <div className="alert error">{staffErr}</div>}
+          {staffMsg && <div className="alert success">{staffMsg}</div>}
+        </section>
       )}
 
       {admin && showCreate && (

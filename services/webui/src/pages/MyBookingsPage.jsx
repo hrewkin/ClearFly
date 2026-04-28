@@ -9,6 +9,8 @@ export default function MyBookingsPage() {
   const [flightsById, setFlightsById] = useState({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [cancellingId, setCancellingId] = useState('');
+  const [info, setInfo] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -62,6 +64,7 @@ export default function MyBookingsPage() {
       </header>
 
       {error && <div className="alert error">{error}</div>}
+      {info && <div className="alert success">{info}</div>}
 
       {loading && <div className="empty-state">Загружаем ваши брони…</div>}
 
@@ -74,6 +77,26 @@ export default function MyBookingsPage() {
       <section className="my-bookings">
         {items.map((b) => {
           const f = flightsById[b.flight_id];
+          const departure = f ? new Date(f.departure_time) : null;
+          const hoursUntil = departure ? (departure - new Date()) / 36e5 : Infinity;
+          const cancelEligible = b.status !== 'CANCELLED' && hoursUntil >= 24;
+          const cancel = async () => {
+            if (!window.confirm(`Отменить бронь по PNR ${b.pnr_code}? Возврат будет оформлен автоматически.`)) return;
+            setCancellingId(b.id);
+            setError('');
+            setInfo('');
+            try {
+              await api.cancelOwnBooking(b.id);
+              setItems((prev) => prev.map((x) => x.id === b.id
+                ? { ...x, status: 'CANCELLED', payment_status: 'REFUNDED' }
+                : x));
+              setInfo(`Бронь ${b.pnr_code} отменена. Уведомление о возврате отправлено.`);
+            } catch (err) {
+              setError(err.message || 'Не удалось отменить бронь');
+            } finally {
+              setCancellingId('');
+            }
+          };
           return (
             <article key={b.id} className="card glass-effect my-booking animate-in">
               <div className="mb-head">
@@ -105,6 +128,22 @@ export default function MyBookingsPage() {
                 {f && <span>Рейс <strong>{f.flight_number}</strong></span>}
                 {f?.gate && <span>Выход <strong>{f.gate}</strong></span>}
                 <span>Создано {formatDate(b.created_at)} {formatTime(b.created_at)}</span>
+              </div>
+              <div className="mb-actions">
+                {b.status === 'CANCELLED' ? (
+                  <span className="muted small">Бронь отменена. Возврат оформлен.</span>
+                ) : cancelEligible ? (
+                  <button
+                    className="ghost-btn"
+                    onClick={cancel}
+                    disabled={cancellingId === b.id}
+                    title="Бронь можно отменить не позднее, чем за 24 часа до вылета"
+                  >
+                    {cancellingId === b.id ? '…' : 'Отменить бронь и оформить возврат'}
+                  </button>
+                ) : (
+                  <span className="muted small">До вылета меньше 24 часов — отмена через сотрудника аэропорта.</span>
+                )}
               </div>
             </article>
           );

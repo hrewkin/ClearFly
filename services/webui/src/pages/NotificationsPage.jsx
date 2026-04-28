@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api, formatTime, formatDate } from '../api';
-import { isAdmin, useAuth } from '../auth';
+import { isAdmin, isStaff, useAuth } from '../auth';
 
 const TYPE_META = {
   BOOKING_CONFIRMED: { icon: '🎟️', tone: 'success', label: 'Бронирование' },
@@ -8,6 +8,7 @@ const TYPE_META = {
   FLIGHT_DELAYED: { icon: '⏱️', tone: 'warning', label: 'Задержка' },
   FLIGHT_CANCELLED: { icon: '❌', tone: 'danger', label: 'Отмена' },
   GATE_CHANGED: { icon: '🚪', tone: 'info', label: 'Смена выхода' },
+  BOOKING_CANCELLED: { icon: '↺', tone: 'warning', label: 'Возврат' },
 };
 
 function meta(type) {
@@ -16,7 +17,7 @@ function meta(type) {
 
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const admin = isAdmin(user);
+  const admin = isAdmin(user) || isStaff(user);
   const passengerId = user?.passenger_id;
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');

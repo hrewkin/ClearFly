@@ -34,7 +34,9 @@ type BookingRepository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*Booking, error)
 	GetByPNR(ctx context.Context, pnr string) (*Booking, error)
 	ListByPassenger(ctx context.Context, passengerID uuid.UUID) ([]Booking, error)
+	ListByFlight(ctx context.Context, flightID uuid.UUID) ([]Booking, error)
 	UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status string) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
 }
 
 // BookingService defines business logic for bookings.

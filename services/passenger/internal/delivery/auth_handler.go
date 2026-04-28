@@ -24,6 +24,13 @@ type registerReq struct {
 	FullName string `json:"full_name"`
 }
 
+type registerStaffReq struct {
+	Email      string `json:"email"`
+	Password   string `json:"password"`
+	FullName   string `json:"full_name"`
+	EmployeeID string `json:"employee_id"`
+}
+
 type loginReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -47,8 +54,53 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			c.JSON(http.StatusConflict, gin.H{"error": "Пользователь с таким email уже зарегистрирован"})
 		case errors.Is(err, auth.ErrEmailFormat):
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный email"})
-		case errors.Is(err, auth.ErrPasswordLength):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Пароль должен быть не меньше 6 символов"})
+		case errors.Is(err, auth.ErrPasswordPolicy):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Пароль должен быть не меньше 8 символов и содержать буквы и цифры"})
+		case errors.Is(err, auth.ErrFullNameLength):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Введите ФИО (минимум имя и фамилия)"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusCreated, authResponse{Token: token, User: u})
+}
+
+// RegisterStaff is admin-only. Staff accounts grant elevated privileges
+// (refunds, manifest access) so the corporate identifier must be issued
+// by an existing administrator rather than self-claimed at the public
+// signup page.
+func (h *AuthHandler) RegisterStaff(c *gin.Context) {
+	caller := extractToken(c)
+	if caller == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Регистрация сотрудника доступна только администратору"})
+		return
+	}
+	if _, role, perr := h.svc.ParseToken(caller); perr != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": perr.Error()})
+		return
+	} else if role != auth.RoleAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Только администратор может создавать аккаунты сотрудников"})
+		return
+	}
+	var req registerStaffReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+		return
+	}
+	u, token, err := h.svc.RegisterStaff(c.Request.Context(), req.Email, req.Password, req.FullName, req.EmployeeID)
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrEmailTaken):
+			c.JSON(http.StatusConflict, gin.H{"error": "Пользователь с таким email уже зарегистрирован"})
+		case errors.Is(err, auth.ErrEmployeeIDTaken):
+			c.JSON(http.StatusConflict, gin.H{"error": "Сотрудник с таким табельным номером уже зарегистрирован"})
+		case errors.Is(err, auth.ErrEmployeeIDEmpty):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Укажите табельный номер сотрудника"})
+		case errors.Is(err, auth.ErrEmailFormat):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Некорректный email"})
+		case errors.Is(err, auth.ErrPasswordPolicy):
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Пароль должен быть не меньше 8 символов и содержать буквы и цифры"})
 		case errors.Is(err, auth.ErrFullNameLength):
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Введите ФИО (минимум имя и фамилия)"})
 		default:

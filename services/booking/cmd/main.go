@@ -78,7 +78,12 @@ func main() {
 	// Seat-aware booking flow
 	r.POST("/bookings/book", flowHandler.BookSeat)
 	r.POST("/bookings/:id/checkin", flowHandler.CheckIn)
+	// Internal-only: cancel is reachable only from the in-cluster network via
+	// the passenger service's authenticated /staff/* endpoints. The gateway
+	// does NOT proxy /internal/*, so this path is unreachable from outside.
+	r.POST("/internal/bookings/:id/cancel", flowHandler.Cancel)
 	r.GET("/bookings/passenger/:id", flowHandler.ListByPassenger)
+	r.GET("/bookings/flight/:id", flowHandler.ListByFlight)
 
 	// Flight management
 	r.POST("/flights", flightHandler.CreateFlight)

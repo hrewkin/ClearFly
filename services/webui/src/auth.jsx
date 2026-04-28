@@ -41,13 +41,22 @@ export function AuthProvider({ children }) {
     return u;
   };
 
+  const registerStaff = async (email, password, fullName, employeeId) => {
+    const { token, user: u } = await api.authRegisterStaff({
+      email, password, full_name: fullName, employee_id: employeeId,
+    });
+    setAuthToken(token);
+    setUser(u);
+    return u;
+  };
+
   const logout = () => {
     setAuthToken('');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, registerStaff, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -63,4 +72,15 @@ export function isAdmin(user) {
 
 export function isPassenger(user) {
   return !!user && user.role === 'passenger';
+}
+
+export function isStaff(user) {
+  return !!user && user.role === 'staff';
+}
+
+export function roleLabel(user) {
+  if (!user) return '';
+  if (user.role === 'admin') return 'Администратор';
+  if (user.role === 'staff') return 'Сотрудник';
+  return 'Пассажир';
 }

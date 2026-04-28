@@ -26,6 +26,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*BaggageStatus, error)
 	List(ctx context.Context, limit int) ([]BaggageStatus, error)
 	ListByPassenger(ctx context.Context, passengerID uuid.UUID) ([]BaggageStatus, error)
+	ListByFlight(ctx context.Context, flightID uuid.UUID) ([]BaggageStatus, error)
 }
 
 type postgresRepo struct {
@@ -67,6 +68,16 @@ func (r *postgresRepo) List(ctx context.Context, limit int) ([]BaggageStatus, er
 	var bags []BaggageStatus
 	query := `SELECT id, passenger_id, flight_id, status, location, updated_at FROM baggage_tracking ORDER BY updated_at DESC LIMIT $1`
 	err := r.db.SelectContext(ctx, &bags, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	return bags, nil
+}
+
+func (r *postgresRepo) ListByFlight(ctx context.Context, flightID uuid.UUID) ([]BaggageStatus, error) {
+	var bags []BaggageStatus
+	query := `SELECT id, passenger_id, flight_id, status, location, updated_at FROM baggage_tracking WHERE flight_id=$1 ORDER BY updated_at DESC`
+	err := r.db.SelectContext(ctx, &bags, query, flightID)
 	if err != nil {
 		return nil, err
 	}

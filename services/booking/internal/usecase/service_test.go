@@ -59,6 +59,25 @@ func (m *mockRepo) UpdatePaymentStatus(ctx context.Context, id uuid.UUID, status
 	return nil
 }
 
+func (m *mockRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	b, ok := m.bookings[id]
+	if !ok {
+		return errors.New("not found")
+	}
+	b.Status = status
+	return nil
+}
+
+func (m *mockRepo) ListByFlight(ctx context.Context, flightID uuid.UUID) ([]Booking, error) {
+	var out []Booking
+	for _, b := range m.bookings {
+		if b.FlightID == flightID {
+			out = append(out, *b)
+		}
+	}
+	return out, nil
+}
+
 func TestCreateBooking(t *testing.T) {
 	repo := newMockRepo()
 	svc := NewBookingService(repo)
