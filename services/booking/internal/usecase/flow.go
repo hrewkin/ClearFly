@@ -196,6 +196,9 @@ func (s *bookingFlow) CheckIn(ctx context.Context, id uuid.UUID) (*Booking, erro
 		return nil, err
 	}
 	b.Status = "CHECKED_IN"
+	if err := s.bookings.UpdateStatus(ctx, id, "CHECKED_IN"); err != nil {
+		return nil, err
+	}
 	if err := s.bookings.UpdatePaymentStatus(ctx, id, "PAID"); err != nil {
 		return nil, err
 	}

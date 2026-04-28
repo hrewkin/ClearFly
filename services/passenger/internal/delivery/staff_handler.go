@@ -100,7 +100,7 @@ func (h *StaffHandler) Refund(c *gin.Context) {
 		"actor":  staffActorLabel(u),
 	})
 	resp, err := h.httpClient.Post(
-		h.bookingHost+"/bookings/"+req.BookingID.String()+"/cancel",
+		h.bookingHost+"/internal/bookings/"+req.BookingID.String()+"/cancel",
 		"application/json", bytes.NewReader(body))
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "booking service unavailable"})
@@ -158,7 +158,7 @@ func (h *StaffHandler) SelfCancel(c *gin.Context) {
 		"actor":  "passenger:" + u.ID.String(),
 	})
 	resp, err := h.httpClient.Post(
-		h.bookingHost+"/bookings/"+bookingID.String()+"/cancel",
+		h.bookingHost+"/internal/bookings/"+bookingID.String()+"/cancel",
 		"application/json", bytes.NewReader(body))
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "booking service unavailable"})

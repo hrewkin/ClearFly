@@ -66,7 +66,23 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	c.JSON(http.StatusCreated, authResponse{Token: token, User: u})
 }
 
+// RegisterStaff is admin-only. Staff accounts grant elevated privileges
+// (refunds, manifest access) so the corporate identifier must be issued
+// by an existing administrator rather than self-claimed at the public
+// signup page.
 func (h *AuthHandler) RegisterStaff(c *gin.Context) {
+	caller := extractToken(c)
+	if caller == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Регистрация сотрудника доступна только администратору"})
+		return
+	}
+	if _, role, perr := h.svc.ParseToken(caller); perr != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": perr.Error()})
+		return
+	} else if role != auth.RoleAdmin {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Только администратор может создавать аккаунты сотрудников"})
+		return
+	}
 	var req registerStaffReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})

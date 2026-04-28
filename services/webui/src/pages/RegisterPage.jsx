@@ -5,13 +5,11 @@ import { useAuth } from '../auth';
 const PASSWORD_HINT = 'От 8 символов, минимум одна буква и одна цифра';
 
 export default function RegisterPage() {
-  const { register, registerStaff } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState('passenger'); // 'passenger' | 'staff'
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
@@ -30,12 +28,6 @@ export default function RegisterPage() {
     if (!mail) errs.email = 'Укажите email';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) errs.email = 'Некорректный email';
 
-    if (mode === 'staff') {
-      const emp = employeeId.trim();
-      if (!emp) errs.employeeId = 'Укажите табельный номер';
-      else if (!/^[A-Za-zА-Яа-я0-9\-]{3,20}$/.test(emp)) errs.employeeId = 'От 3 до 20 символов: буквы, цифры и дефис';
-    }
-
     if (!password) errs.password = 'Введите пароль';
     else if (password.length < 8) errs.password = PASSWORD_HINT;
     else if (!/[A-Za-zА-Яа-я]/.test(password) || !/\d/.test(password)) errs.password = PASSWORD_HINT;
@@ -53,11 +45,7 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      if (mode === 'staff') {
-        await registerStaff(email.trim(), password, fullName.trim(), employeeId.trim());
-      } else {
-        await register(email.trim(), password, fullName.trim());
-      }
+      await register(email.trim(), password, fullName.trim());
       navigate('/', { replace: true });
     } catch (err) {
       setError(err.message || 'Не удалось зарегистрироваться');
@@ -76,33 +64,9 @@ export default function RegisterPage() {
             <small>Чистое небо</small>
           </div>
         </div>
-        <h2>Регистрация</h2>
-
-        <div className="role-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'passenger'}
-            className={`role-tab${mode === 'passenger' ? ' active' : ''}`}
-            onClick={() => setMode('passenger')}
-          >
-            Пассажир
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'staff'}
-            className={`role-tab${mode === 'staff' ? ' active' : ''}`}
-            onClick={() => setMode('staff')}
-          >
-            Сотрудник
-          </button>
-        </div>
-
+        <h2>Регистрация пассажира</h2>
         <p className="muted small">
-          {mode === 'staff'
-            ? 'Аккаунт сотрудника авиакомпании. Требуется внутренний табельный номер.'
-            : 'Аккаунт пассажира. Профиль и бронирования будут закреплены за ним.'}
+          Аккаунты сотрудников создаются администратором — обратитесь в кадровую службу авиакомпании.
         </p>
 
         <form onSubmit={submit}>
@@ -117,14 +81,6 @@ export default function RegisterPage() {
             <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors({ ...errors, email: undefined }); }} placeholder="ivan@example.com" required />
             {errors.email && <small className="field-error-msg">{errors.email}</small>}
           </label>
-
-          {mode === 'staff' && (
-            <label className={`field${errors.employeeId ? ' field-error' : ''}`}>
-              <span>Табельный номер</span>
-              <input value={employeeId} onChange={(e) => { setEmployeeId(e.target.value); if (errors.employeeId) setErrors({ ...errors, employeeId: undefined }); }} placeholder="EMP-12345" required />
-              {errors.employeeId && <small className="field-error-msg">{errors.employeeId}</small>}
-            </label>
-          )}
 
           <label className={`field${errors.password ? ' field-error' : ''}`}>
             <span>Пароль</span>
