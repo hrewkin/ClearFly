@@ -78,7 +78,9 @@ func main() {
 	// Seat-aware booking flow
 	r.POST("/bookings/book", flowHandler.BookSeat)
 	r.POST("/bookings/:id/checkin", flowHandler.CheckIn)
+	r.POST("/bookings/:id/cancel", flowHandler.Cancel)
 	r.GET("/bookings/passenger/:id", flowHandler.ListByPassenger)
+	r.GET("/bookings/flight/:id", flowHandler.ListByFlight)
 
 	// Flight management
 	r.POST("/flights", flightHandler.CreateFlight)

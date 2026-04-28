@@ -62,6 +62,50 @@ func (h *FlowHandler) ListByPassenger(c *gin.Context) {
 	c.JSON(http.StatusOK, bookings)
 }
 
+// ListByFlight handles GET /bookings/flight/:id and returns all bookings
+// (including cancelled ones) for a given flight. Used by the staff
+// dashboard to render the passenger manifest.
+func (h *FlowHandler) ListByFlight(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid flight id"})
+		return
+	}
+	bookings, err := h.flow.ListBookingsByFlight(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, bookings)
+}
+
+// Cancel handles POST /bookings/:id/cancel. Body may carry an optional
+// reason/actor; on success the seat is released and a BOOKING_CANCELLED
+// notification is published.
+func (h *FlowHandler) Cancel(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid booking id"})
+		return
+	}
+	var req struct {
+		Reason string `json:"reason"`
+		Actor  string `json:"actor"`
+	}
+	_ = c.ShouldBindJSON(&req)
+	b, err := h.flow.CancelBooking(c.Request.Context(), id, req.Reason, req.Actor)
+	if err != nil {
+		switch {
+		case errors.Is(err, usecase.ErrBookingNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "booking not found"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+	c.JSON(http.StatusOK, b)
+}
+
 // CheckIn handles POST /bookings/:id/checkin.
 func (h *FlowHandler) CheckIn(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))

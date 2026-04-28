@@ -82,3 +82,26 @@ func (r *postgresBookingRepo) UpdatePaymentStatus(ctx context.Context, id uuid.U
 	_, err := r.db.ExecContext(ctx, `UPDATE bookings SET payment_status=$2 WHERE id=$1`, id, status)
 	return err
 }
+
+func (r *postgresBookingRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE bookings SET status=$2 WHERE id=$1`, id, status)
+	return err
+}
+
+func (r *postgresBookingRepo) ListByFlight(ctx context.Context, flightID uuid.UUID) ([]usecase.Booking, error) {
+	var bs []usecase.Booking
+	query := `SELECT id, flight_id, passenger_id, status,
+	          COALESCE(pnr_code, '') AS pnr_code,
+	          seat_id,
+	          COALESCE(price, 0) AS price,
+	          COALESCE(currency, '') AS currency,
+	          COALESCE(payment_status, '') AS payment_status,
+	          COALESCE(created_at, NOW()) AS created_at
+	          FROM bookings WHERE flight_id=$1
+	          ORDER BY created_at`
+	err := r.db.SelectContext(ctx, &bs, query, flightID)
+	if err != nil {
+		return nil, err
+	}
+	return bs, nil
+}

@@ -48,6 +48,10 @@ func (m *mockRepo) ListByPassenger(ctx context.Context, passengerID uuid.UUID) (
 	return nil, nil
 }
 
+func (m *mockRepo) ListByFlight(ctx context.Context, flightID uuid.UUID) ([]repository.BaggageStatus, error) {
+	return nil, nil
+}
+
 func TestGetBaggage_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 

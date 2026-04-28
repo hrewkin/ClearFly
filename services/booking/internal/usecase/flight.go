@@ -53,6 +53,7 @@ type FlightRepository interface {
 	GetSeatsByFlight(ctx context.Context, flightID uuid.UUID) ([]Seat, error)
 	GetSeatByID(ctx context.Context, seatID uuid.UUID) (*Seat, error)
 	BlockSeat(ctx context.Context, seatID uuid.UUID, bookingID uuid.UUID) error
+	ReleaseSeat(ctx context.Context, seatID uuid.UUID) error
 	CreateSeats(ctx context.Context, seats []Seat) error
 	UpcomingFlights(ctx context.Context, limit int) ([]Flight, error)
 

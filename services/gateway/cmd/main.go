@@ -71,6 +71,9 @@ func main() {
 		api.Any("/auth/*path", func(c *gin.Context) {
 			proxyReq(c, "http://passenger:8080", "/auth")
 		})
+		api.Any("/staff/*path", func(c *gin.Context) {
+			proxyReq(c, "http://passenger:8080", "/staff")
+		})
 	}
 
 	log.Println("Gateway listening on :8080")

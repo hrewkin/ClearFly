@@ -34,7 +34,9 @@ type NotificationEvent struct {
 type BookingFlowService interface {
 	BookSeat(ctx context.Context, flightID, passengerID, seatID uuid.UUID) (*Booking, error)
 	ListBookings(ctx context.Context, passengerID uuid.UUID) ([]Booking, error)
+	ListBookingsByFlight(ctx context.Context, flightID uuid.UUID) ([]Booking, error)
 	CheckIn(ctx context.Context, id uuid.UUID) (*Booking, error)
+	CancelBooking(ctx context.Context, id uuid.UUID, reason, actor string) (*Booking, error)
 }
 
 type bookingFlow struct {
@@ -128,6 +130,64 @@ func (s *bookingFlow) BookSeat(ctx context.Context, flightID, passengerID, seatI
 
 func (s *bookingFlow) ListBookings(ctx context.Context, passengerID uuid.UUID) ([]Booking, error) {
 	return s.bookings.ListByPassenger(ctx, passengerID)
+}
+
+func (s *bookingFlow) ListBookingsByFlight(ctx context.Context, flightID uuid.UUID) ([]Booking, error) {
+	return s.bookings.ListByFlight(ctx, flightID)
+}
+
+// CancelBooking sets the booking status to CANCELLED, releases the
+// associated seat (if any) and publishes a notification. It is safe to call
+// on an already-cancelled booking — the operation is a no-op in that case.
+//
+// `actor` is a free-form label ("passenger", "staff:EMP-001", "admin")
+// stored in the notification meta and helpful for debugging.
+func (s *bookingFlow) CancelBooking(ctx context.Context, id uuid.UUID, reason, actor string) (*Booking, error) {
+	b, err := s.bookings.GetByID(ctx, id)
+	if err != nil {
+		return nil, ErrBookingNotFound
+	}
+	if b.Status == "CANCELLED" {
+		return b, nil
+	}
+
+	if b.SeatID != nil {
+		if err := s.flights.ReleaseSeat(ctx, *b.SeatID); err != nil {
+			return nil, err
+		}
+	}
+	if err := s.bookings.UpdateStatus(ctx, b.ID, "CANCELLED"); err != nil {
+		return nil, err
+	}
+	if err := s.bookings.UpdatePaymentStatus(ctx, b.ID, "REFUNDED"); err != nil {
+		return nil, err
+	}
+	b.Status = "CANCELLED"
+	b.PaymentStatus = "REFUNDED"
+
+	if s.publisher != nil {
+		flight, _ := s.flights.GetFlightByID(ctx, b.FlightID)
+		title := "Бронирование отменено"
+		content := "Возврат оформлен по PNR " + b.PNRCode + "."
+		if flight != nil {
+			content = "Возврат оформлен по PNR " + b.PNRCode + ". Рейс " + flight.FlightNumber + " " + flight.Origin + " → " + flight.Destination + "."
+		}
+		_ = s.publisher.Publish(ctx, NotificationEvent{
+			Type:        "BOOKING_CANCELLED",
+			PassengerID: b.PassengerID.String(),
+			FlightID:    b.FlightID.String(),
+			Title:       title,
+			Content:     content,
+			Channels:    []string{"PUSH", "EMAIL"},
+			Meta: map[string]interface{}{
+				"pnr":    b.PNRCode,
+				"reason": reason,
+				"actor":  actor,
+			},
+		})
+	}
+
+	return b, nil
 }
 
 func (s *bookingFlow) CheckIn(ctx context.Context, id uuid.UUID) (*Booking, error) {

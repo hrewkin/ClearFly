@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cleanair/passenger/internal/audit"
 	"github.com/cleanair/passenger/internal/auth"
 	"github.com/cleanair/passenger/internal/delivery"
 	"github.com/cleanair/passenger/internal/repository"
@@ -85,8 +86,18 @@ func main() {
 
 	authH := delivery.NewAuthHandler(authSvc)
 	r.POST("/auth/register", authH.Register)
+	r.POST("/auth/register-staff", authH.RegisterStaff)
 	r.POST("/auth/login", authH.Login)
 	r.GET("/auth/me", authH.Me)
+
+	auditRepo := audit.NewRepository(db)
+	if err := auditRepo.Migrate(context.Background()); err != nil {
+		log.Fatalf("audit migration failed: %v", err)
+	}
+	staffH := delivery.NewStaffHandler(authSvc, auditRepo, os.Getenv("BOOKING_SERVICE_URL"))
+	r.POST("/staff/refund", staffH.Refund)
+	r.POST("/staff/bookings/:id/cancel", staffH.SelfCancel)
+	r.GET("/staff/audit", staffH.Audit)
 
 	// Run server
 	log.Println("Passenger service listening on :8080")

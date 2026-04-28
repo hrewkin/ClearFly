@@ -101,6 +101,7 @@ export const api = {
   listBaggage: (params = {}) => {
     const qs = new URLSearchParams();
     if (params.passenger_id) qs.set('passenger_id', params.passenger_id);
+    if (params.flight_id) qs.set('flight_id', params.flight_id);
     if (params.limit) qs.set('limit', params.limit);
     const s = qs.toString();
     return request('GET', `/baggage${s ? `?${s}` : ''}`);
@@ -111,10 +112,16 @@ export const api = {
   flightLoadFactor: (id) => request('GET', `/analytics/load-factor/${id}`),
 
   authRegister: (payload) => request('POST', '/auth/register', payload),
+  authRegisterStaff: (payload) => request('POST', '/auth/register-staff', payload),
   authLogin: (payload) => request('POST', '/auth/login', payload),
   authMe: () => request('GET', '/auth/me'),
 
   listNotificationsByPassenger: (id) => request('GET', `/notifications/${id}`),
+
+  listFlightBookings: (flightId) => request('GET', `/bookings/flight/${flightId}`),
+  staffRefund: (payload) => request('POST', '/staff/refund', payload),
+  cancelOwnBooking: (id) => request('POST', `/staff/bookings/${id}/cancel`),
+  staffAudit: () => request('GET', '/staff/audit'),
 };
 
 export const BAGGAGE_STAGES = [

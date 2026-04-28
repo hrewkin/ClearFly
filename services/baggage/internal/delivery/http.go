@@ -87,6 +87,21 @@ func (h *HttpHandler) ListBaggage(c *gin.Context) {
 		return
 	}
 
+	if fid := c.Query("flight_id"); fid != "" {
+		fu, err := uuid.Parse(fid)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid flight_id"})
+			return
+		}
+		bags, err := h.repo.ListByFlight(c.Request.Context(), fu)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, bags)
+		return
+	}
+
 	limit := 50
 	if l := c.Query("limit"); l != "" {
 		if v, err := strconv.Atoi(l); err == nil {

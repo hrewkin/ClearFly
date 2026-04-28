@@ -13,17 +13,21 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import MyBookingsPage from './pages/MyBookingsPage';
-import { AuthProvider, isAdmin, useAuth } from './auth';
+import StaffPage from './pages/StaffPage';
+import AuditPage from './pages/AuditPage';
+import { AuthProvider, roleLabel, useAuth } from './auth';
 
 const NAV = [
-  { to: '/', label: 'Обзор', icon: '◈', exact: true, roles: ['admin', 'passenger'] },
+  { to: '/', label: 'Обзор', icon: '◈', exact: true, roles: ['admin', 'passenger', 'staff'] },
   { to: '/search', label: 'Поиск рейсов', icon: '▸', roles: ['admin', 'passenger'] },
   { to: '/my-bookings', label: 'Мои брони', icon: '⊞', roles: ['passenger'] },
-  { to: '/notifications', label: 'Уведомления', icon: '◉', roles: ['admin', 'passenger'] },
+  { to: '/staff', label: 'Сотрудник', icon: '⌬', roles: ['staff', 'admin'] },
+  { to: '/notifications', label: 'Уведомления', icon: '◉', roles: ['admin', 'passenger', 'staff'] },
   { to: '/operations', label: 'Операции', icon: '⎔', roles: ['admin'] },
-  { to: '/baggage', label: 'Багаж', icon: '⊡', roles: ['admin', 'passenger'] },
+  { to: '/baggage', label: 'Багаж', icon: '⊡', roles: ['admin', 'passenger', 'staff'] },
   { to: '/analytics', label: 'Аналитика', icon: '⊿', roles: ['admin'] },
-  { to: '/profile', label: 'Профиль', icon: '◎', roles: ['admin', 'passenger'] },
+  { to: '/audit', label: 'Аудит', icon: '⌖', roles: ['admin'] },
+  { to: '/profile', label: 'Профиль', icon: '◎', roles: ['admin', 'passenger', 'staff'] },
 ];
 
 function Shell({ children }) {
@@ -61,7 +65,7 @@ function Shell({ children }) {
           <div className="sidebar-user">
             <div>
               <div className="sidebar-user-name">{user.full_name}</div>
-              <div className="sidebar-user-role">{isAdmin(user) ? 'Администратор' : 'Пассажир'}</div>
+              <div className="sidebar-user-role">{roleLabel(user)}{user.role === 'staff' && user.employee_id ? ` · №${user.employee_id}` : ''}</div>
             </div>
             <button className="logout-btn" onClick={logout}>Выйти</button>
           </div>
@@ -89,6 +93,7 @@ function GuestOnly({ children }) {
 }
 
 function AppRoutes() {
+  const all = ['admin', 'passenger', 'staff'];
   const passengerOrAdmin = ['admin', 'passenger'];
   return (
     <Routes>
@@ -96,7 +101,7 @@ function AppRoutes() {
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
       <Route
         path="/"
-        element={<RequireAuth roles={passengerOrAdmin}><Shell><HomePage /></Shell></RequireAuth>}
+        element={<RequireAuth roles={all}><Shell><HomePage /></Shell></RequireAuth>}
       />
       <Route
         path="/search"
@@ -111,8 +116,12 @@ function AppRoutes() {
         element={<RequireAuth roles={['passenger']}><Shell><MyBookingsPage /></Shell></RequireAuth>}
       />
       <Route
+        path="/staff"
+        element={<RequireAuth roles={['staff', 'admin']}><Shell><StaffPage /></Shell></RequireAuth>}
+      />
+      <Route
         path="/notifications"
-        element={<RequireAuth roles={passengerOrAdmin}><Shell><NotificationsPage /></Shell></RequireAuth>}
+        element={<RequireAuth roles={all}><Shell><NotificationsPage /></Shell></RequireAuth>}
       />
       <Route
         path="/operations"
@@ -120,15 +129,19 @@ function AppRoutes() {
       />
       <Route
         path="/baggage"
-        element={<RequireAuth roles={passengerOrAdmin}><Shell><BaggagePage /></Shell></RequireAuth>}
+        element={<RequireAuth roles={all}><Shell><BaggagePage /></Shell></RequireAuth>}
       />
       <Route
         path="/analytics"
         element={<RequireAuth roles={['admin']}><Shell><AnalyticsPage /></Shell></RequireAuth>}
       />
       <Route
+        path="/audit"
+        element={<RequireAuth roles={['admin']}><Shell><AuditPage /></Shell></RequireAuth>}
+      />
+      <Route
         path="/profile"
-        element={<RequireAuth roles={passengerOrAdmin}><Shell><ProfilePage /></Shell></RequireAuth>}
+        element={<RequireAuth roles={all}><Shell><ProfilePage /></Shell></RequireAuth>}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
